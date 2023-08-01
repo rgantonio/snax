@@ -1074,17 +1074,23 @@ module snax_shell #(
 
     end
 
-    // Manual remapping
-    for (i = 0; i < NumHwpeMemPorts; i++) begin: gen_hardmap
-      assign snax_tcdm   [i].req  = tcdm_req[i];
-      assign tcdm_gnt    [i]      = snax_tcdm[i].gnt;
-      assign snax_tcdm   [i].add  = tcdm_add[i];
-      assign snax_tcdm   [i].wen  = tcdm_wen[i];
-      assign snax_tcdm   [i].be   = tcdm_be[i];
-      assign snax_tcdm   [i].data = tcdm_data[i];
-      assign tcdm_r_data [i]      = snax_tcdm[i].r_data;
-      assign tcdm_r_valid[i]      = snax_tcdm[i].r_valid;
+    if(HwpeNe16 || HwpeRedmule) begin: gen_hardmap
+
+      // Manual remapping
+      for (i = 0; i < NumHwpeMemPorts; i++) begin: gen_loop_hardmap
+        assign snax_tcdm   [i].req  = tcdm_req[i];
+        assign tcdm_gnt    [i]      = snax_tcdm[i].gnt;
+        assign snax_tcdm   [i].add  = tcdm_add[i];
+        assign snax_tcdm   [i].wen  = tcdm_wen[i];
+        assign snax_tcdm   [i].be   = tcdm_be[i];
+        assign snax_tcdm   [i].data = tcdm_data[i];
+        assign tcdm_r_data [i]      = snax_tcdm[i].r_data;
+        assign tcdm_r_valid[i]      = snax_tcdm[i].r_valid;
+      end
+
     end
+
+    
     
     for (i = 0; i < NumHwpeMemPorts; i++) begin: gen_hwpe_to_reqrsp
       snax_hwpe_to_reqrsp #(
