@@ -1096,7 +1096,8 @@ module snax_shell #(
 
 
     // Manual remapping
-    for (i = 0; i < NumHwpeMemPorts; i++) begin: gen_loop_hardmap
+    for (i = 0; i < NumHwpeMemPorts; i++) begin: gen_map_translate
+
       assign snax_tcdm       [i].req  = snax_mem.req [i];
       assign snax_mem.gnt    [i]      = snax_tcdm    [i].gnt;
       assign snax_tcdm       [i].add  = snax_mem.add [i];
@@ -1105,10 +1106,7 @@ module snax_shell #(
       assign snax_tcdm       [i].data = snax_mem.data[i];
       assign snax_mem.r_data [i]      = snax_tcdm    [i].r_data;
       assign snax_mem.r_valid[i]      = snax_tcdm    [i].r_valid;
-    end
 
-    
-    for (i = 0; i < NumHwpeMemPorts; i++) begin: gen_hwpe_to_reqrsp
       snax_hwpe_to_reqrsp #(
         .DataWidth        ( DataWidth          ),  // Data width to use
         .tcdm_req_t       ( tcdm_req_t         ),  // TCDM request type
@@ -1121,6 +1119,7 @@ module snax_shell #(
         .hwpe_tcdm_slave  ( snax_tcdm[i]       )   // HWPE TCDM slave port
       );
     end
+
 
   end else begin: gen_no_snax
 
