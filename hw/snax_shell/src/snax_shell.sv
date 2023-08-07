@@ -22,6 +22,8 @@
 `include "common_cells/assertions.svh"
 `include "common_cells/registers.svh"
 `include "snitch_vm/typedef.svh"
+`include "tcdm_interface/typedef.svh"
+`include "mem_interface/typedef.svh"
 
 //---------------------------------------------
 // Import MAC packages here
@@ -924,7 +926,7 @@ module snax_shell #(
   //-------------------------------------------------------------------------
   // Generate Snax HWPE Controller
   //-------------------------------------------------------------------------
-  if (HwpeMac || HwpeNe16 || HwpeRedmule) begin: gen_hwpe_ctrl
+  if (HwpeMac || HwpeNe16 || HwpeRedmule) begin: gen_hwpe_acc
 
     // HWPE control interface
     hwpe_ctrl_intf_periph #(
@@ -942,6 +944,11 @@ module snax_shell #(
     typedef logic [31:0] mem_addr_t;
     typedef logic [31:0] mem_data_t;
     typedef logic [ 3:0] mem_strb_t;
+
+    typedef struct packed {
+      logic [3:0] core_id;
+      bit         is_core;
+    } mem_user_t;
 
     typedef struct packed {
       logic      [NumHwpeMemPorts-1:0]  req;
@@ -1119,6 +1126,47 @@ module snax_shell #(
         .hwpe_tcdm_slave  ( snax_tcdm[i]       )   // HWPE TCDM slave port
       );
     end
+
+    localparam int unsigned LocalMemWidth = 32;
+    localparam int unsigned LocalMemBanks = DMADataWidth/LocalMemWidth; // Parameter that maximizes DMA bandwidth
+
+    tcdm_req_t [NumHwpeMemPorts-1:0] hwpe_tcdm_req;
+    tcdm_rsp_t [NumHwpeMemPorts-1:0] hwpe_tcdm_rsp;
+
+    for (i = 0; i < NumHwpeMemPorts; i++) begin: gen_test_trans
+      assign hwpe_tcdm_req[i] = hwpe_tcdm_req_o[i];
+    end
+
+    `MEM_TYPEDEF_ALL(mem, mem_addr_t, mem_data_t, mem_strb_t, mem_user_t)
+
+    mem_req_t [LocalMemBanks-1:0] local_mem_narrow_req;
+    mem_rsp_t [LocalMemBanks-1:0] local_mem_narrow_rsp;
+
+    // TODO: temporary tie low
+    for (i = 0; i < LocalMemBanks; i++) begin
+      assign local_mem_narrow_rsp[i].p.data  = 0;
+      assign local_mem_narrow_rsp[i].q_ready = 1;
+    end
+
+    snitch_tcdm_interconnect #(
+      .NumInp                ( NumHwpeMemPorts      ),
+      .NumOut                ( LocalMemBanks        ),
+      .tcdm_req_t            ( tcdm_req_t           ),
+      .tcdm_rsp_t            ( tcdm_rsp_t           ),
+      .mem_req_t             ( mem_req_t            ),
+      .mem_rsp_t             ( mem_rsp_t            ),
+      .MemAddrWidth          ( 6                    ), //TODO: Make me flexible later
+      .DataWidth             ( LocalMemWidth        ),
+      .user_t                ( tcdm_user_t          ),
+      .MemoryResponseLatency ( 2                    )  // Make this minimum 2 only because it stops the assertion errors
+    ) i_tcdm_interconnect (
+      .clk_i                 ( clk_i                ),
+      .rst_ni                ( rst_ni               ),
+      .req_i                 ( hwpe_tcdm_req        ),
+      .rsp_o                 ( hwpe_tcdm_rsp        ),
+      .mem_req_o             ( local_mem_narrow_req ),
+      .mem_rsp_i             ( local_mem_narrow_rsp )
+    );
 
 
   end else begin: gen_no_snax
