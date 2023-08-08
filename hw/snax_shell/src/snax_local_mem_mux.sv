@@ -6,17 +6,18 @@
 //---------------------------------------------
 
 module snax_local_mem_mux #(
-  parameter int unsigned AddrWidth        = 48,
-  parameter int unsigned NarrowDataWidth  = 32,
-  parameter int unsigned WideDataWidth    = 512,
-  parameter int unsigned LocalMemSize     = 1024,
-  parameter int unsigned CoreIDWidth      = 5,
-  parameter int unsigned NumBanks         = WideDataWidth/NarrowDataWidth,   // Need to maximize banks depending on WideDataWidth
-  parameter type         addr_t           = logic,
-  parameter type         data_t           = logic,
-  parameter type         strb_t           = logic,
-  parameter type         mem_req_t        = logic,                    // Memory request payload type, usually write enable, write data, etc.
-  parameter type         mem_rsp_t        = logic                     // Memory response payload type, usually read data
+  parameter int unsigned LocalMemAddrWidth  = 48,
+  parameter int unsigned NarrowDataWidth    = 32,
+  parameter int unsigned WideDataWidth      = 512,
+  parameter int unsigned LocalMemSize       = 1024,
+  parameter int unsigned CoreIDWidth        = 5,
+  parameter int unsigned NumBanks           = WideDataWidth/NarrowDataWidth,   // Need to maximize banks depending on WideDataWidth
+  parameter              SimInit            = "none", 
+  parameter type         addr_t             = logic,
+  parameter type         data_t             = logic,
+  parameter type         strb_t             = logic,
+  parameter type         mem_req_t          = logic,                    // Memory request payload type, usually write enable, write data, etc.
+  parameter type         mem_rsp_t          = logic                     // Memory response payload type, usually read data
 )(
   input  logic                     clk_i,         // Clock
   input  logic                     rst_ni,        // Asynchronous reset, active low
@@ -25,45 +26,53 @@ module snax_local_mem_mux #(
   output mem_rsp_t [NumBanks-1:0]  mem_rsp_o      // Memory valid-ready format
 );
 
-  
+
+  // Typedef for memory control signals
+  typedef struct packed {
+    logic  cs;
+    logic  wen;
+    addr_t add;
+    strb_t be;
+    data_t rdata;
+    data_t wdata;
+  } mem_ctrl_t;
+
+  mem_ctrl_t [NumBanks-1:0] mem_ctrl;
 
   // generate banks of the superbank
   for (genvar i = 0; i < NumBanks; i++) begin : gen_local_mem_banks
 
-    logic  mem_cs;
-    logic  mem_wen;
-    addr_t mem_add;
-    strb_t mem_be;
-    data_t mem_rdata;
-    data_t mem_wdata;
+    
 
     // This is the actual SRAM model
     // You can find this in tech cells repository: .bender/git/tech_cells_*/src/rtl
     tc_sram_impl #(
-      .NumWords  ( LocalMemSize     ),
-      .DataWidth ( NarrowDataWidth  ),
-      .ByteWidth ( 8                ),
-      .NumPorts  ( 1                ),
-      .Latency   ( 1                )
-      // .impl_in_t (               )  // TODO: Use me later when we do implementation later
+      .NumWords  ( LocalMemSize       ),
+      .DataWidth ( 32                 ),
+      .ByteWidth ( 8                  ),
+      .NumPorts  ( 1                  ),
+      .Latency   ( 0                  ),
+      .SimInit   ( SimInit            )
+      //.impl_in_t (                    )  // TODO: Fix this before synthesis
     ) i_data_mem (
-      .clk_i     ( clk_i            ),
-      .rst_ni    ( rst_ni           ),
-      .impl_i    ( '0               ), // TODO: Use me later when we do implementation later
-      .impl_o    (                  ),
-      .req_i     ( mem_cs           ),
-      .we_i      ( mem_wen          ),
-      .addr_i    ( mem_add          ),
-      .wdata_i   ( mem_wdata        ),
-      .be_i      ( mem_be           ),
-      .rdata_o   ( mem_rdata        )
+      .clk_i     ( clk_i             ),
+      .rst_ni    ( rst_ni             ),
+      .impl_i    ( '0                 ), // TODO: Use me later when we do implementation later
+      .impl_o    (                    ),
+      .req_i     ( mem_ctrl[i].cs     ),
+      .we_i      ( mem_ctrl[i].wen    ),
+      .addr_i    ( mem_ctrl[i].add    ),
+      .wdata_i   ( mem_ctrl[i].wdata  ),
+      .be_i      ( mem_ctrl[i].be     ),
+      .rdata_o   ( mem_ctrl[i].rdata  )
     );
+    
 
     data_t amo_rdata_local;
 
     // TODO(zarubaf): Share atomic units between mutltiple cuts
     snitch_amo_shim #(
-      .AddrMemWidth   ( AddrWidth                   ),
+      .AddrMemWidth   ( LocalMemAddrWidth           ),
       .DataWidth      ( NarrowDataWidth             ),
       .CoreIDWidth    ( CoreIDWidth                 )
     ) i_amo_shim (
@@ -79,12 +88,12 @@ module snax_local_mem_mux #(
       .is_core_i      ( mem_req_i[i].q.user.is_core ),
       .rdata_o        ( amo_rdata_local             ),
       .amo_i          ( mem_req_i[i].q.amo          ),
-      .mem_req_o      ( mem_cs                      ),
-      .mem_add_o      ( mem_add                     ),
-      .mem_wen_o      ( mem_wen                     ),
-      .mem_wdata_o    ( mem_wdata                   ),
-      .mem_be_o       ( mem_be                      ),
-      .mem_rdata_i    ( mem_rdata                   ),
+      .mem_req_o      ( mem_ctrl[i].cs              ),
+      .mem_add_o      ( mem_ctrl[i].add             ),
+      .mem_wen_o      ( mem_ctrl[i].wen             ),
+      .mem_wdata_o    ( mem_ctrl[i].wdata           ),
+      .mem_be_o       ( mem_ctrl[i].be              ),
+      .mem_rdata_i    ( mem_ctrl[i].rdata           ),
       .dma_access_i   ( dma_access_i                ),
       // TODO(zarubaf): Signal AMO conflict somewhere. Socregs?
       .amo_conflict_o (                             )
@@ -109,21 +118,21 @@ endmodule
 /* ------------------ Module usage ------------------
 
 snax_local_mem_mux #(
-  .AddrWidth        ( AddrWidth       ),
-  .NarrowDataWidth  ( NarrowDataWidth ),
-  .WideDataWidth    ( WideDataWidth   ),
-  .LocalMemSize     ( LocalMemSize    ),
-  .NumBanks         ( NumBanks        ),  // Need to maximize banks depending on WideDataWidth
-  .addr_t           ( addr_t          ),
-  .data_t           ( data_t          ),
-  .strb_t           ( strb_t          ),
-  .mem_req_t        ( mem_req_t       ),  // Memory request payload type, usually write enable, write data, etc.
-  .mem_rsp_t        ( mem_rsp_t       )   // Memory response payload type, usually read data
+  .LocalMemAddrWidth  ( LocalMemAddrWidth ),
+  .NarrowDataWidth    ( NarrowDataWidth   ),
+  .WideDataWidth      ( WideDataWidth     ),
+  .LocalMemSize       ( LocalMemSize      ),
+  .NumBanks           ( NumBanks          ),  // Need to maximize banks depending on WideDataWidth
+  .addr_t             ( addr_t            ),
+  .data_t             ( data_t            ),
+  .strb_t             ( strb_t            ),
+  .mem_req_t          ( mem_req_t         ),  // Memory request payload type, usually write enable, write data, etc.
+  .mem_rsp_t          ( mem_rsp_t         )   // Memory response payload type, usually read data
 ) i_snax_local_mem_mux (
-  .clk_i            ( clk_i           ),  // Clock
-  .rst_ni           ( rst_ni          ),  // Asynchronous reset, active low
-  .mem_req_i        ( mem_req_i       ),  // Memory valid-ready format
-  .mem_rsp_o        ( mem_rsp_o       ),  // Memory valid-ready format
+  .clk_i              ( clk_i             ),  // Clock
+  .rst_ni             ( rst_ni            ),  // Asynchronous reset, active low
+  .mem_req_i          ( mem_req_i         ),  // Memory valid-ready format
+  .mem_rsp_o          ( mem_rsp_o         )   // Memory valid-ready format
 );
 
 ----------------------------------------------------- */

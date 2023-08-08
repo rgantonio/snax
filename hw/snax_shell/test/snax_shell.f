@@ -288,6 +288,7 @@
 /users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/hw/snax_shell/src/snax_hwpe_ctrl.sv
 /users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/hw/snax_shell/src/snax_hwpe_to_reqrsp.sv
 /users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/hw/snax_shell/src/snax_shell.sv
+/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/hw/snax_shell/src/snax_local_mem_mux.sv
 
 
 #--------------------------------------------

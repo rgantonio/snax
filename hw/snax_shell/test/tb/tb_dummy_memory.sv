@@ -39,7 +39,7 @@ module tb_dummy_memory #(
     logic [MemoryWidth-1:0] data_addr_offset;
     logic [MemoryWidth-1:0] next_data_mem;
 
-    assign data_addr_offset = data_req_i.q.addr >> 3;
+    assign data_addr_offset = data_req_i.q.addr >> 2;
     assign next_data_mem    = data_mem[data_addr_offset];
 
     // Seperate start memory for now

@@ -79,7 +79,7 @@ module tb_snax_wb;
     localparam int unsigned NrBanks                 = 8;    // Default was 32 - but kept small for TCDM port testing purposes
     localparam int unsigned TCDMDepth               = 64;   // Default was 512 - but kept small for TCDM port testing purposes
     localparam int unsigned TCDMSize                = NrBanks * TCDMDepth * (NarrowDataWidth/8);
-    localparam int unsigned TCDMAddrWidth           = $clog2(TCDMSize);
+    localparam int unsigned TCDMAddrWidth           = $clog2(TCDMSize); //Default was $clog2(TCDMSize) but we can change to 10 bits for now
 
 
     //---------------------------------------------
@@ -119,7 +119,7 @@ module tb_snax_wb;
     typedef logic [    WideUserWidth-1:0] user_dma_t;
 
     typedef struct packed {
-        logic core_id;
+        logic [4:0] core_id;
         bit   is_core;
     } tcdm_user_t;
 
@@ -354,6 +354,7 @@ module tb_snax_wb;
     // TCDM Data memory
     //---------------------------------------------
 
+    /*
     genvar i;
     for( i=0; i<NumHwpeMemPorts; i++ ) begin
         tb_dummy_memory #(
@@ -370,138 +371,6 @@ module tb_snax_wb;
             .data_rsp_o   ( hwpe_tcdm_rsp_i[i] )
         );
     end
-
-
-    /*
-    logic [NarrowDataWidth-1:0] tcdm_data_mem [0:255];
-
-	initial begin $readmemh("./mem/data/rand_data_2.txt", tcdm_data_mem); end
-
-    // This signal is to fake a start-up because starting immediately on a load
-    // Messes up the simulation so we need to have a "fake" start-up
-    logic [NarrowDataWidth-1:0] tcdm_data_addr_offset;
-    logic [NarrowDataWidth-1:0] tcdm_next_data_mem;
-
-    assign tcdm_data_addr_offset = tcdm_req_o[0].q.addr >> 3;
-    assign tcdm_next_data_mem    = tcdm_data_mem[tcdm_data_addr_offset];
-
-    // Main memory control incorporated in the fake startup
-    always_ff @ (posedge clk_i or negedge rst_ni) begin
-
-        if(!rst_ni) begin
-
-            tcdm_rsp_i[0].p.data  <= 64'd0;
-            tcdm_rsp_i[0].p_valid <= 1'b0;
-            
-        end else begin
-            
-            tcdm_rsp_i[0].p.data  <= (start_mem) ? tcdm_next_data_mem : '0;
-            tcdm_rsp_i[0].p_valid <= (start_mem) ? tcdm_rsp_i[0].q_ready & tcdm_req_o[0].q_valid: 1'b0;
-            
-        end
-        
-    end
-
-    // Synchronized writing of data since this messes up the simulation
-    // Need to accommodate memory multiplexing for this part
-    // Let's assume first that no arbitration is set
-    always @ (posedge clk_i) begin
-        if((tcdm_req_o[0].q.write  & tcdm_req_o[0].q_valid) & tcdm_rsp_i[0].q_ready) begin
-            tcdm_data_mem[tcdm_data_addr_offset] <= tcdm_req_o[0].q.data;
-        end
-    end
-
-    //assign data_rsp_i.p.data  = data_mem[data_rsp_i.q.addr >> 2];
-    assign tcdm_rsp_i[0].q_ready = (start_mem) ? 1'b1 : 1'b0;
-
-    //---------------------------------------------
-    // For the TCDM HWPE we will make synthetic banks
-    //---------------------------------------------
-    logic [NarrowDataWidth-1:0] hwpe_tcdm_mem_0 [0:255];
-    logic [NarrowDataWidth-1:0] hwpe_tcdm_mem_1 [0:255];
-    logic [NarrowDataWidth-1:0] hwpe_tcdm_mem_2 [0:255];
-    logic [NarrowDataWidth-1:0] hwpe_tcdm_mem_3 [0:255];
-
-    initial begin
-        $readmemh("./mem/data/hwpe_data_mem_0.txt", hwpe_tcdm_mem_0);
-        $readmemh("./mem/data/hwpe_data_mem_1.txt", hwpe_tcdm_mem_1);
-        $readmemh("./mem/data/hwpe_data_mem_2.txt", hwpe_tcdm_mem_2);
-        $readmemh("./mem/data/hwpe_data_mem_3.txt", hwpe_tcdm_mem_3);
-    end
-
-    logic [NarrowDataWidth-1:0] hwpe_tcdm_data_addr_offset [0:3];
-    logic [NarrowDataWidth-1:0] hwpe_tcdm_next_data_mem    [0:3];
-
-    assign hwpe_tcdm_data_addr_offset[0] = tcdm_req_o[1].q.addr >> 3;
-    assign hwpe_tcdm_next_data_mem[0]    = hwpe_tcdm_mem_0[hwpe_tcdm_data_addr_offset[0]];
-
-    assign hwpe_tcdm_data_addr_offset[1] = tcdm_req_o[2].q.addr >> 3;
-    assign hwpe_tcdm_next_data_mem[1]    = hwpe_tcdm_mem_1[hwpe_tcdm_data_addr_offset[1]];
-
-    assign hwpe_tcdm_data_addr_offset[2] = tcdm_req_o[3].q.addr >> 3;
-    assign hwpe_tcdm_next_data_mem[2]    = hwpe_tcdm_mem_2[hwpe_tcdm_data_addr_offset[2]];
-
-    assign hwpe_tcdm_data_addr_offset[3] = tcdm_req_o[4].q.addr >> 3;
-    assign hwpe_tcdm_next_data_mem[3]    = hwpe_tcdm_mem_3[hwpe_tcdm_data_addr_offset[3]];
-
-    // Main memory control incorporated in the fake startup
-    always_ff @ (posedge clk_i or negedge rst_ni) begin
-
-        if(!rst_ni) begin
-
-            tcdm_rsp_i[1].p.data  <= 64'd0;
-            tcdm_rsp_i[1].p_valid <= 1'b0;
-
-            tcdm_rsp_i[2].p.data  <= 64'd0;
-            tcdm_rsp_i[2].p_valid <= 1'b0;
-
-            tcdm_rsp_i[3].p.data  <= 64'd0;
-            tcdm_rsp_i[3].p_valid <= 1'b0;
-
-            tcdm_rsp_i[4].p.data  <= 64'd0;
-            tcdm_rsp_i[4].p_valid <= 1'b0;
-            
-        end else begin
-            
-            tcdm_rsp_i[1].p.data  <= (start_mem) ? hwpe_tcdm_next_data_mem[0] : '0;
-            tcdm_rsp_i[1].p_valid <= (start_mem) ? tcdm_rsp_i[1].q_ready & tcdm_req_o[1].q_valid: 1'b0;
-
-            tcdm_rsp_i[2].p.data  <= (start_mem) ? hwpe_tcdm_next_data_mem[1] : '0;
-            tcdm_rsp_i[2].p_valid <= (start_mem) ? tcdm_rsp_i[2].q_ready & tcdm_req_o[2].q_valid: 1'b0;
-
-            tcdm_rsp_i[3].p.data  <= (start_mem) ? hwpe_tcdm_next_data_mem[2] : '0;
-            tcdm_rsp_i[3].p_valid <= (start_mem) ? tcdm_rsp_i[3].q_ready & tcdm_req_o[3].q_valid: 1'b0;
-
-            tcdm_rsp_i[4].p.data  <= (start_mem) ? hwpe_tcdm_next_data_mem[3] : '0;
-            tcdm_rsp_i[4].p_valid <= (start_mem) ? tcdm_rsp_i[4].q_ready & tcdm_req_o[4].q_valid: 1'b0;
-            
-        end
-        
-    end
-
-    always @ (posedge clk_i) begin
-        if((tcdm_req_o[1].q.write  & tcdm_req_o[1].q_valid) & tcdm_rsp_i[1].q_ready) begin
-            hwpe_tcdm_mem_0[hwpe_tcdm_data_addr_offset[0]] <= tcdm_req_o[1].q.data;
-        end
-
-        if((tcdm_req_o[2].q.write  & tcdm_req_o[2].q_valid) & tcdm_rsp_i[2].q_ready) begin
-            hwpe_tcdm_mem_1[hwpe_tcdm_data_addr_offset[1]] <= tcdm_req_o[2].q.data;
-        end
-
-        if((tcdm_req_o[3].q.write  & tcdm_req_o[3].q_valid) & tcdm_rsp_i[3].q_ready) begin
-            hwpe_tcdm_mem_2[hwpe_tcdm_data_addr_offset[2]] <= tcdm_req_o[3].q.data;
-        end
-
-        if((tcdm_req_o[4].q.write  & tcdm_req_o[4].q_valid) & tcdm_rsp_i[4].q_ready) begin
-            hwpe_tcdm_mem_3[hwpe_tcdm_data_addr_offset[3]] <= tcdm_req_o[4].q.data;
-        end
-    end
-
-    //assign data_rsp_i.p.data  = data_mem[data_rsp_i.q.addr >> 2];
-    assign tcdm_rsp_i[1].q_ready = (start_mem) ? 1'b1 : 1'b0;
-    assign tcdm_rsp_i[2].q_ready = (start_mem) ? 1'b1 : 1'b0;
-    assign tcdm_rsp_i[3].q_ready = (start_mem) ? 1'b1 : 1'b0;
-    assign tcdm_rsp_i[4].q_ready = (start_mem) ? 1'b1 : 1'b0;
     */
 
     //---------------------------------------------
@@ -584,8 +453,6 @@ module tb_snax_wb;
       .data_rsp_i             ( data_rsp_i              ),
       .tcdm_req_o             ( tcdm_req_o              ),
       .tcdm_rsp_i             ( tcdm_rsp_i              ),
-      .hwpe_tcdm_req_o        ( hwpe_tcdm_req_o         ),
-      .hwpe_tcdm_rsp_i        ( hwpe_tcdm_rsp_i         ),
       .axi_dma_req_o          ( axi_dma_req_o           ),
       .axi_dma_res_i          ( axi_dma_res_i           ),
       .axi_dma_busy_o         (                         ), // Leave this unused first
