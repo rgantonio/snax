@@ -5,6 +5,9 @@
 // Author: Ryan Antonio (ryan.antonio@kuleuven.be)
 //---------------------------------------------
 
+// verilog_lint: waive-start line-length
+// verilog_lint: waive-start no-trailing-spaces
+
 module snax_local_mem_mux #(
   parameter int unsigned LocalMemAddrWidth  = 48,
   parameter int unsigned NarrowDataWidth    = 32,
@@ -112,6 +115,8 @@ module snax_local_mem_mux #(
 
   end
 
+// verilog_lint: waive-stop line-length
+// verilog_lint: waive-stop no-trailing-spaces
 
 endmodule
 
