@@ -15,7 +15,7 @@ module snax_local_mem_mux #(
   parameter int unsigned LocalMemSize       = 1024,
   parameter int unsigned CoreIDWidth        = 5,
   parameter int unsigned NumBanks           = WideDataWidth/NarrowDataWidth,   // Need to maximize banks depending on WideDataWidth
-  parameter              SimInit            = "none", 
+  parameter string       SimInit            = "none", 
   parameter type         addr_t             = logic,
   parameter type         data_t             = logic,
   parameter type         strb_t             = logic,
