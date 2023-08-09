@@ -357,7 +357,7 @@ module tb_snax_wb;
     /*
     genvar i;
     for( i=0; i<NumHwpeMemPorts; i++ ) begin
-        tb_dummy_memory #(
+        tb_snax_dummy_memory #(
             .MemoryWidth  ( NarrowDataWidth    ), 
             .MemorySize   ( 1024               ),
             .tcdm_req_t   ( tcdm_req_t         ),

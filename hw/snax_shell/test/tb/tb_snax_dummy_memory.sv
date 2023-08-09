@@ -9,7 +9,7 @@
 // This assumes byte addressability and double word aligned
 //---------------------------------------------
 
-module tb_dummy_memory #(
+module tb_snax_dummy_memory #(
   parameter int unsigned MemoryWidth  = 64,
   parameter int unsigned MemorySize   = 1024,
   parameter type         tcdm_req_t   = logic,

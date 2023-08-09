@@ -295,5 +295,5 @@
 # Snax testbenches
 #--------------------------------------------
 /users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/hw/snax_shell/test/tb/tb_snax_shell_wb.sv
-/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/hw/snax_shell/test/tb/tb_dummy_memory.sv
+/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/hw/snax_shell/test/tb/tb_snax_dummy_memory.sv
 /users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/hw/snax_shell/test/tb/tb_snax_wb.sv
