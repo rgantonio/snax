@@ -22,6 +22,8 @@
 `include "common_cells/assertions.svh"
 `include "common_cells/registers.svh"
 `include "snitch_vm/typedef.svh"
+`include "tcdm_interface/typedef.svh"
+`include "mem_interface/typedef.svh"
 
 //---------------------------------------------
 // Import MAC packages here
@@ -94,6 +96,9 @@ module snax_shell #(
   parameter bit          HwpeNe16           = 0,
   // Has HWPE Redmule support
   parameter bit          HwpeRedmule        = 0,
+  // Local memory parameters
+  parameter int unsigned LocalMemSize       = 1024,
+  parameter int unsigned LocalMemAddrWidth  = $clog2(LocalMemSize),
   parameter int unsigned NumIntOutstandingLoads = 0,
   parameter int unsigned NumIntOutstandingMem   = 0,
   parameter int unsigned NumFPOutstandingLoads  = 0,
@@ -149,9 +154,6 @@ module snax_shell #(
   // TCDM Streamer Ports
   output tcdm_req_t [TCDMPorts-1:0]  tcdm_req_o,
   input  tcdm_rsp_t [TCDMPorts-1:0]  tcdm_rsp_i,
-  // TCDM HWPE streamer ports
-  output tcdm_req_t [NumHwpeMemPorts-1:0]  hwpe_tcdm_req_o,
-  input  tcdm_rsp_t [NumHwpeMemPorts-1:0]  hwpe_tcdm_rsp_i,
 
   // Accelerator Offload port
   // DMA ports
@@ -924,7 +926,7 @@ module snax_shell #(
   //-------------------------------------------------------------------------
   // Generate Snax HWPE Controller
   //-------------------------------------------------------------------------
-  if (HwpeMac || HwpeNe16 || HwpeRedmule) begin: gen_hwpe_ctrl
+  if (HwpeMac || HwpeNe16 || HwpeRedmule) begin: gen_hwpe_acc
 
     // HWPE control interface
     hwpe_ctrl_intf_periph #(
@@ -936,6 +938,28 @@ module snax_shell #(
     hwpe_stream_intf_tcdm snax_tcdm [NumHwpeMemPorts-1:0] (
         .clk ( clk_i )
     );
+
+
+    // For the local memory definitions
+    typedef logic                  [31:0] hwpe_mem_addr_t;
+    typedef logic [LocalMemAddrWidth-1:0] mem_addr_t;
+    typedef logic                  [31:0] mem_data_t;
+    typedef logic                  [ 3:0] mem_strb_t;
+
+    typedef struct packed {
+      logic           [NumHwpeMemPorts-1:0]  req;
+      logic           [NumHwpeMemPorts-1:0]  gnt;
+      hwpe_mem_addr_t [NumHwpeMemPorts-1:0]  add;
+      logic           [NumHwpeMemPorts-1:0]  wen;
+      mem_strb_t      [NumHwpeMemPorts-1:0]  be;
+      mem_data_t      [NumHwpeMemPorts-1:0]  data;
+      mem_data_t      [NumHwpeMemPorts-1:0]  r_data;
+      logic           [NumHwpeMemPorts-1:0]  r_valid;
+      logic                                  r_opc;
+      logic                                  r_user;
+    } loc_mem_t;
+
+    loc_mem_t snax_mem;
 
     // SNAX HWPE controller
     snax_hwpe_ctrl #(
@@ -954,18 +978,6 @@ module snax_shell #(
       .periph       ( snax_periph        )  // periph master port
     );
 
-    // Just a bunch of wire declaration
-    // NE16 and Redmule needs manual hard mapping of signals
-    logic [NumHwpeMemPorts-1:0]       tcdm_req;
-    logic [NumHwpeMemPorts-1:0]       tcdm_gnt;
-    logic [NumHwpeMemPorts-1:0][31:0] tcdm_add;
-    logic [NumHwpeMemPorts-1:0]       tcdm_wen;
-    logic [NumHwpeMemPorts-1:0][ 3:0] tcdm_be;
-    logic [NumHwpeMemPorts-1:0][31:0] tcdm_data;
-    logic [NumHwpeMemPorts-1:0][31:0] tcdm_r_data;
-    logic [NumHwpeMemPorts-1:0]       tcdm_r_valid;
-    logic                             tcdm_r_opc;
-    logic                             tcdm_r_user;
 
     //-------------------------------------------------------------------------
     // Main MAC generation
@@ -975,17 +987,33 @@ module snax_shell #(
       import mac_package::*;
 
       // Main MAC engine
-      mac_top #(
-          .N_CORES     ( 1                ),
-          .MP          ( NumHwpeMemPorts  ),
-          .ID          ( 5                )
+      mac_top_wrap #(
+          .N_CORES      ( 1                ),
+          .MP           ( NumHwpeMemPorts  ),
+          .ID           ( 5                )
       ) i_mac_top (
-          .clk_i       ( clk_i            ),
-          .rst_ni      ( rst_ni           ),
-          .test_mode_i ( 1'b0             ),
-          .evt_o       ( /*unused*/       ),
-          .tcdm        ( snax_tcdm        ),   // Master port
-          .periph      ( snax_periph      )    // Slave port
+        .clk_i          ( clk_i               ),
+        .rst_ni         ( rst_ni              ),
+        .test_mode_i    ( 1'b0                ),
+        .evt_o          (                     ),      // Unused
+        .tcdm_req       ( snax_mem.req        ),
+        .tcdm_gnt       ( snax_mem.gnt        ),      // input
+        .tcdm_add       ( snax_mem.add        ),
+        .tcdm_wen       ( snax_mem.wen        ),
+        .tcdm_be        ( snax_mem.be         ),
+        .tcdm_data      ( snax_mem.data       ),
+        .tcdm_r_data    ( snax_mem.r_data     ),      // input
+        .tcdm_r_valid   ( snax_mem.r_valid    ),      // input
+        .periph_req     ( snax_periph.req     ),
+        .periph_gnt     ( snax_periph.gnt     ),
+        .periph_add     ( snax_periph.add     ),
+        .periph_wen     ( snax_periph.wen     ),
+        .periph_be      ( snax_periph.be      ),
+        .periph_data    ( snax_periph.data    ),
+        .periph_id      ( snax_periph.id      ),
+        .periph_r_data  ( snax_periph.r_data  ),
+        .periph_r_valid ( snax_periph.r_valid ),
+        .periph_r_id    ( snax_periph.r_id    )
       );
 
     //-------------------------------------------------------------------------
@@ -1019,25 +1047,20 @@ module snax_shell #(
         .periph_r_data  ( snax_periph.r_data  ),
         .periph_r_valid ( snax_periph.r_valid ),
         .periph_r_id    ( snax_periph.r_id    ),
-        .tcdm_req       ( tcdm_req            ),
-        .tcdm_gnt       ( tcdm_gnt            ),      // input
-        .tcdm_add       ( tcdm_add            ),
-        .tcdm_wen       ( tcdm_wen            ),
-        .tcdm_be        ( tcdm_be             ),
-        .tcdm_data      ( tcdm_data           ),
-        .tcdm_r_data    ( tcdm_r_data         ),      // input
-        .tcdm_r_valid   ( tcdm_r_valid        )       // input
+        .tcdm_req       ( snax_mem.req            ),
+        .tcdm_gnt       ( snax_mem.gnt            ),      // input
+        .tcdm_add       ( snax_mem.add            ),
+        .tcdm_wen       ( snax_mem.wen            ),
+        .tcdm_be        ( snax_mem.be             ),
+        .tcdm_data      ( snax_mem.data           ),
+        .tcdm_r_data    ( snax_mem.r_data         ),      // input
+        .tcdm_r_valid   ( snax_mem.r_valid        )       // input
       );
 
 
     end else if (HwpeRedmule) begin: gen_redmule
 
       import redmule_pkg::*;
-
-      // TODO: What do the opc and user do?
-      // Tie to zero for now
-      assign tcdm_r_opc  = 1'b0;
-      assign tcdm_r_user = 1'b0;
 
       redmule_wrap #(
         .ID_WIDTH          ( 5                   ),
@@ -1050,16 +1073,16 @@ module snax_shell #(
         .test_mode_i       ( 1'b0                ),
         .evt_o             (                     ),
         .busy_o            (                     ),
-        .tcdm_req_o        ( tcdm_req            ),
-        .tcdm_add_o        ( tcdm_add            ),
-        .tcdm_wen_o        ( tcdm_wen            ),
-        .tcdm_be_o         ( tcdm_be             ),
-        .tcdm_data_o       ( tcdm_data           ),
-        .tcdm_gnt_i        ( tcdm_gnt            ),
-        .tcdm_r_data_i     ( tcdm_r_data         ),
-        .tcdm_r_valid_i    ( tcdm_r_valid        ),
-        .tcdm_r_opc_i      ( tcdm_r_opc          ),
-        .tcdm_r_user_i     ( tcdm_r_user         ),
+        .tcdm_req_o        ( snax_mem.req            ),
+        .tcdm_add_o        ( snax_mem.add            ),
+        .tcdm_wen_o        ( snax_mem.wen            ),
+        .tcdm_be_o         ( snax_mem.be             ),
+        .tcdm_data_o       ( snax_mem.data           ),
+        .tcdm_gnt_i        ( snax_mem.gnt            ),
+        .tcdm_r_data_i     ( snax_mem.r_data         ),
+        .tcdm_r_valid_i    ( snax_mem.r_valid   ),
+        .tcdm_r_opc_i      ( '0          ), //TODO: Fix me later
+        .tcdm_r_user_i     ( '0         ), //TODO: Fix me later
         .periph_req_i      ( snax_periph.req     ),
         .periph_gnt_o      ( snax_periph.gnt     ),
         .periph_add_i      ( snax_periph.add     ),
@@ -1074,37 +1097,86 @@ module snax_shell #(
 
     end
 
-    if(HwpeNe16 || HwpeRedmule) begin: gen_hardmap
 
-      // Manual remapping
-      for (i = 0; i < NumHwpeMemPorts; i++) begin: gen_loop_hardmap
-        assign snax_tcdm   [i].req  = tcdm_req[i];
-        assign tcdm_gnt    [i]      = snax_tcdm[i].gnt;
-        assign snax_tcdm   [i].add  = tcdm_add[i];
-        assign snax_tcdm   [i].wen  = tcdm_wen[i];
-        assign snax_tcdm   [i].be   = tcdm_be[i];
-        assign snax_tcdm   [i].data = tcdm_data[i];
-        assign tcdm_r_data [i]      = snax_tcdm[i].r_data;
-        assign tcdm_r_valid[i]      = snax_tcdm[i].r_valid;
-      end
+    tcdm_req_t [NumHwpeMemPorts-1:0] hwpe_tcdm_req;
+    tcdm_rsp_t [NumHwpeMemPorts-1:0] hwpe_tcdm_rsp;
 
-    end
+    // Manual remapping
+    for (i = 0; i < NumHwpeMemPorts; i++) begin: gen_map_translate
 
-    
-    
-    for (i = 0; i < NumHwpeMemPorts; i++) begin: gen_hwpe_to_reqrsp
+      assign snax_tcdm       [i].req  = snax_mem.req [i];
+      assign snax_mem.gnt    [i]      = snax_tcdm    [i].gnt;
+      assign snax_tcdm       [i].add  = snax_mem.add [i];
+      assign snax_tcdm       [i].wen  = snax_mem.wen [i];
+      assign snax_tcdm       [i].be   = snax_mem.be  [i];
+      assign snax_tcdm       [i].data = snax_mem.data[i];
+      assign snax_mem.r_data [i]      = snax_tcdm    [i].r_data;
+      assign snax_mem.r_valid[i]      = snax_tcdm    [i].r_valid;
+
       snax_hwpe_to_reqrsp #(
-        .DataWidth        ( DataWidth          ),  // Data width to use
-        .tcdm_req_t       ( tcdm_req_t         ),  // TCDM request type
-        .tcdm_rsp_t       ( tcdm_rsp_t         )   // TCDM response type
+        .DataWidth        ( DataWidth         ),  // Data width to use
+        .tcdm_req_t       ( tcdm_req_t        ),  // TCDM request type
+        .tcdm_rsp_t       ( tcdm_rsp_t        )   // TCDM response type
       ) i_snax_hwpe_to_reqrsp (
-        .clk_i            ( clk_i              ),  // Clock
-        .rst_ni           ( rst_ni             ),  // Asynchronous reset, active low
-        .tcdm_req_o       ( hwpe_tcdm_req_o[i] ),  // TCDM valid ready format
-        .tcdm_rsp_i       ( hwpe_tcdm_rsp_i[i] ),  // TCDM valid ready format
-        .hwpe_tcdm_slave  ( snax_tcdm[i]       )   // HWPE TCDM slave port
+        .clk_i            ( clk_i             ),  // Clock
+        .rst_ni           ( rst_ni            ),  // Asynchronous reset, active low
+        .tcdm_req_o       ( hwpe_tcdm_req[i]  ),  // TCDM valid ready format
+        .tcdm_rsp_i       ( hwpe_tcdm_rsp[i]  ),  // TCDM valid ready format
+        .hwpe_tcdm_slave  ( snax_tcdm[i]      )   // HWPE TCDM slave port
       );
     end
+
+    // TODO: Fix and clean me later
+    localparam int unsigned LocalMemWidth = 32;
+    localparam int unsigned LocalMemBanks = DMADataWidth/LocalMemWidth; // Parameter that maximizes DMA bandwidth
+
+    `MEM_TYPEDEF_ALL(mem, mem_addr_t, mem_data_t, mem_strb_t, tcdm_user_t)
+
+    mem_req_t [LocalMemBanks-1:0] local_mem_narrow_req;
+    mem_rsp_t [LocalMemBanks-1:0] local_mem_narrow_rsp;
+    
+    snitch_tcdm_interconnect #(
+      .NumInp                ( NumHwpeMemPorts      ),
+      .NumOut                ( LocalMemBanks        ),
+      .tcdm_req_t            ( tcdm_req_t           ),
+      .tcdm_rsp_t            ( tcdm_rsp_t           ),
+      .mem_req_t             ( mem_req_t            ),
+      .mem_rsp_t             ( mem_rsp_t            ),
+      .MemAddrWidth          ( 6                    ), //TODO: Make me flexible later and note that this has something to do with the tcdm_reqrsp_t dependency. 
+      .DataWidth             ( LocalMemWidth        ),
+      .user_t                ( tcdm_user_t          ),
+      .MemoryResponseLatency ( 1                    )  
+    ) i_tcdm_interconnect (
+      .clk_i                 ( clk_i                ),
+      .rst_ni                ( rst_ni               ),
+      .req_i                 ( hwpe_tcdm_req        ),
+      .rsp_o                 ( hwpe_tcdm_rsp        ),
+      .mem_req_o             ( local_mem_narrow_req ),
+      .mem_rsp_i             ( local_mem_narrow_rsp )
+    );
+    
+    
+    snax_local_mem_mux #(
+      .LocalMemAddrWidth  ( LocalMemAddrWidth     ),
+      .NarrowDataWidth    ( 32                    ),
+      .WideDataWidth      ( 512                   ),
+      .LocalMemSize       ( LocalMemSize          ),
+      .NumBanks           ( 16                    ), // Need to maximize banks depending on WideDataWidth
+      .SimInit            ( "random"              ),
+      .addr_t             ( mem_addr_t            ),
+      .data_t             ( mem_data_t            ),
+      .strb_t             ( mem_strb_t            ),
+      .mem_req_t          ( mem_req_t             ), // Memory request payload type, usually write enable, write data, etc.
+      .mem_rsp_t          ( mem_rsp_t             )  // Memory response payload type, usually read data
+    ) i_snax_local_mem_mux (
+      .clk_i              ( clk_i                 ), // Clock
+      .rst_ni             ( rst_ni                ), // Asynchronous reset, active low
+      .dma_access_i       ( '0                    ),
+      .mem_req_i          ( local_mem_narrow_req  ), // Memory valid-ready format
+      .mem_rsp_o          ( local_mem_narrow_rsp  )  // Memory valid-ready format local_mem_narrow_rsp
+    );
+    
+  
 
   end else begin: gen_no_snax
 

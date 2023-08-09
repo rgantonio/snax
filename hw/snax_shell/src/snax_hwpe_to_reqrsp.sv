@@ -60,7 +60,7 @@ module snax_hwpe_to_reqrsp #(
 
   // Pack
   assign fifo_hwpe_tcdm_data_in.add   = hwpe_tcdm_slave.add;
-  assign fifo_hwpe_tcdm_data_in.wen   = hwpe_tcdm_slave.wen;
+  assign fifo_hwpe_tcdm_data_in.wen   = !hwpe_tcdm_slave.wen; // Not wen, because HWPE uses wen=0 to write and wen = 1 to read but memory uses wen = 1 to write and wen = 0 to read
   assign fifo_hwpe_tcdm_data_in.be    = be;
   assign fifo_hwpe_tcdm_data_in.data  = hwpe_tcdm_slave.data;
   assign fifo_hwpe_tcdm_data_in.valid = hwpe_tcdm_slave.gnt & hwpe_tcdm_slave.req;
@@ -130,7 +130,7 @@ module snax_hwpe_to_reqrsp #(
   // Some signals are unimportant so we tie them to 0
   // Strb is just extended version of strb
   //---------------------------------------------
-  assign tcdm_req_o.q.addr = {{31{1'b0}},unpack_addr} << 1;
+  assign tcdm_req_o.q.addr = {{31{1'b0}},unpack_addr};
   assign tcdm_req_o.q.data = {{31{1'b0}},unpack_data};
   assign tcdm_req_o.q.amo  = AMONone;
   assign tcdm_req_o.q.strb = {StrbWidth{strb}};

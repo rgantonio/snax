@@ -47,6 +47,10 @@ module snax_hwpe_ctrl #(
   logic fifo_sn_hwpe_full;
   logic fifo_hwpe_sn_full;
 
+  // FIFO empty signals
+  logic fifo_sn_hwpe_empty;
+  logic fifo_hwpe_sn_empty;
+
   // These signals are decoded and come from
   // the acc_reqrsp signals
   logic       req;
@@ -121,7 +125,7 @@ module snax_hwpe_ctrl #(
   assign push_sn_hwpe = transaction_valid;
 
   // POP SN to HWPE FIFO queue when the HWPE transaction is valid
-  assign pop_sn_hwpe  = periph.gnt && periph.req;
+  assign pop_sn_hwpe  = periph.gnt & periph.req & !fifo_sn_hwpe_empty;
 
   // As long as FIFO is not full, we are always ready to take in data
   // from the snitch's acc_reqrsp ports
@@ -139,7 +143,7 @@ module snax_hwpe_ctrl #(
     .flush_i    ( 1'b0                ),
     .testmode_i ( 1'b0                ),
     .full_o     ( fifo_sn_hwpe_full   ),
-    .empty_o    ( /*unused*/          ),
+    .empty_o    ( fifo_sn_hwpe_empty  ),
     .usage_o    ( /*unused*/          ),
     .data_i     ( fifo_sn_hwpe_in     ),
     .push_i     ( push_sn_hwpe        ),
@@ -159,7 +163,7 @@ module snax_hwpe_ctrl #(
   
   // Unpack
   assign resp_o.id     = fifo_hwpe_sn_out.r_id;
-  assign resp_valid_o  = fifo_hwpe_sn_out.r_valid;
+  assign resp_valid_o  = fifo_hwpe_sn_out.r_valid & !fifo_hwpe_sn_empty;
   assign unpacked_data = fifo_hwpe_sn_out.r_data;
 
   // The only signal we get from HWPE is the r_valid to indicate valid read data
@@ -168,7 +172,7 @@ module snax_hwpe_ctrl #(
 
   // Pop HWPE to SN FIFO queue when acc_resp transaction is valid
   // And also if the transaction is not a base register
-  assign pop_hwpe_sn = resp_ready_i & resp_valid_o;
+  assign pop_hwpe_sn = resp_ready_i & resp_valid_o & !fifo_hwpe_sn_empty;
 
   // Simply extending the unpacked_data to 64 bits
   // At the same time wiring it to the resp_o.data value
@@ -193,20 +197,20 @@ module snax_hwpe_ctrl #(
   // FIFO queue for valid reads from HWPE to Snitch
   //---------------------------------------------
   fifo_v3 #(
-    .dtype      ( tcdm_hwpe_t       ), // Sum of address and 
-    .DEPTH      ( 8                 )  // Arbitrarily chosen
+    .dtype      ( tcdm_hwpe_t        ), // Sum of address and 
+    .DEPTH      ( 8                  )  // Arbitrarily chosen
   ) i_hwpe_sn_fifo (
-    .clk_i      ( clk_i             ),
-    .rst_ni     ( rst_ni            ),
-    .flush_i    ( 1'b0              ),
-    .testmode_i ( 1'b0              ),
-    .full_o     ( fifo_hwpe_sn_full ), //WARNING: for now the signal is here but it's usage is unclear. Will see what happens later.
-    .empty_o    ( /*unused*/        ),
-    .usage_o    ( /*unused*/        ),
-    .data_i     ( fifo_hwpe_sn_in   ),
-    .push_i     ( push_hwpe_sn      ),
-    .data_o     ( fifo_hwpe_sn_out  ),
-    .pop_i      (  pop_hwpe_sn      )
+    .clk_i      ( clk_i              ),
+    .rst_ni     ( rst_ni             ),
+    .flush_i    ( 1'b0               ),
+    .testmode_i ( 1'b0               ),
+    .full_o     ( fifo_hwpe_sn_full  ), //WARNING: for now the signal is here but it's usage is unclear. Will see what happens later.
+    .empty_o    ( fifo_hwpe_sn_empty ),
+    .usage_o    ( /*unused*/         ),
+    .data_i     ( fifo_hwpe_sn_in    ),
+    .push_i     ( push_hwpe_sn       ),
+    .data_o     ( fifo_hwpe_sn_out   ),
+    .pop_i      (  pop_hwpe_sn       )
   );
 
 // verilog_lint: waive-stop line-length
