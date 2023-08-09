@@ -941,10 +941,16 @@ module snax_shell #(
 
 
     // For the local memory definitions
+    localparam int unsigned DMAStrbWidth = DMADataWidth/8;
+
     typedef logic                  [31:0] hwpe_mem_addr_t;
     typedef logic [LocalMemAddrWidth-1:0] mem_addr_t;
     typedef logic                  [31:0] mem_data_t;
     typedef logic                  [ 3:0] mem_strb_t;
+
+    typedef logic [LocalMemAddrWidth-1:0] dma_addr_t;
+    typedef logic      [DMADataWidth-1:0] dma_data_t;
+    typedef logic      [DMAStrbWidth-1:0] dma_strb_t;
 
     typedef struct packed {
       logic           [NumHwpeMemPorts-1:0]  req;
@@ -1131,10 +1137,16 @@ module snax_shell #(
     localparam int unsigned LocalMemBanks = DMADataWidth/LocalMemWidth; // Parameter that maximizes DMA bandwidth
 
     `MEM_TYPEDEF_ALL(mem, mem_addr_t, mem_data_t, mem_strb_t, tcdm_user_t)
+    `MEM_TYPEDEF_ALL(mem_dma, dma_addr_t, dma_data_t, dma_strb_t, logic)
 
     mem_req_t [LocalMemBanks-1:0] local_mem_narrow_req;
     mem_rsp_t [LocalMemBanks-1:0] local_mem_narrow_rsp;
-    
+
+    mem_req_t [LocalMemBanks-1:0] local_mem_req;
+    mem_rsp_t [LocalMemBanks-1:0] local_mem_rsp;
+
+    //assign local_mem_narrow_req_test = local_mem_narrow_req;
+
     snitch_tcdm_interconnect #(
       .NumInp                ( NumHwpeMemPorts      ),
       .NumOut                ( LocalMemBanks        ),
@@ -1154,26 +1166,46 @@ module snax_shell #(
       .mem_req_o             ( local_mem_narrow_req ),
       .mem_rsp_i             ( local_mem_narrow_rsp )
     );
+
+
+    mem_wide_narrow_mux #(
+      .NarrowDataWidth  ( 32                ), // TODO: Fix me later
+      .WideDataWidth    ( DMADataWidth      ),
+      .mem_narrow_req_t ( mem_req_t         ),
+      .mem_narrow_rsp_t ( mem_rsp_t         ),
+      .mem_wide_req_t   ( mem_dma_req_t     ),
+      .mem_wide_rsp_t   ( mem_dma_rsp_t     )
+    ) i_mem_wide_narrow_mux (
+      .clk_i,
+      .rst_ni,
+      .in_narrow_req_i  ( local_mem_narrow_req ),
+      .in_narrow_rsp_o  ( local_mem_narrow_rsp ),
+      .in_wide_req_i    ( '0                   ),
+      .in_wide_rsp_o    (                      ), // TODO: Add me later
+      .out_req_o        ( local_mem_req        ),
+      .out_rsp_i        ( local_mem_rsp        ),
+      .sel_wide_i       ( '0                   )  // TODO: Add me later
+    );
     
     
     snax_local_mem_mux #(
-      .LocalMemAddrWidth  ( LocalMemAddrWidth     ),
-      .NarrowDataWidth    ( 32                    ),
-      .WideDataWidth      ( 512                   ),
-      .LocalMemSize       ( LocalMemSize          ),
-      .NumBanks           ( 16                    ), // Need to maximize banks depending on WideDataWidth
-      .SimInit            ( "random"              ),
-      .addr_t             ( mem_addr_t            ),
-      .data_t             ( mem_data_t            ),
-      .strb_t             ( mem_strb_t            ),
-      .mem_req_t          ( mem_req_t             ), // Memory request payload type, usually write enable, write data, etc.
-      .mem_rsp_t          ( mem_rsp_t             )  // Memory response payload type, usually read data
+      .LocalMemAddrWidth  ( LocalMemAddrWidth ),
+      .NarrowDataWidth    ( 32                ),
+      .WideDataWidth      ( DMADataWidth      ),
+      .LocalMemSize       ( LocalMemSize      ),
+      .NumBanks           ( 16                ), // Need to maximize banks depending on WideDataWidth
+      .SimInit            ( "random"          ),
+      .addr_t             ( mem_addr_t        ),
+      .data_t             ( mem_data_t        ),
+      .strb_t             ( mem_strb_t        ),
+      .mem_req_t          ( mem_req_t         ), // Memory request payload type, usually write enable, write data, etc.
+      .mem_rsp_t          ( mem_rsp_t         )  // Memory response payload type, usually read data
     ) i_snax_local_mem_mux (
-      .clk_i              ( clk_i                 ), // Clock
-      .rst_ni             ( rst_ni                ), // Asynchronous reset, active low
-      .dma_access_i       ( '0                    ),
-      .mem_req_i          ( local_mem_narrow_req  ), // Memory valid-ready format
-      .mem_rsp_o          ( local_mem_narrow_rsp  )  // Memory valid-ready format local_mem_narrow_rsp
+      .clk_i              ( clk_i             ), // Clock
+      .rst_ni             ( rst_ni            ), // Asynchronous reset, active low
+      .dma_access_i       ( '0                ),
+      .mem_req_i          ( local_mem_req     ), // Memory valid-ready format
+      .mem_rsp_o          ( local_mem_rsp     )  // Memory valid-ready format local_mem_narrow_rsp
     );
     
   
