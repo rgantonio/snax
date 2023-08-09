@@ -14,3 +14,4 @@ This subdirectory contains the supported systems and their simulation environmen
         - `banshee`: Banshee-related startup SW implmentations.
       - `tests`: lists of tests that can run on the snitch cluster.
     - `test`: contains testharness and bootrom of the snitch cluster
+    
