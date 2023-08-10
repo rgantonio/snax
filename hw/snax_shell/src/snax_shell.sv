@@ -405,7 +405,8 @@ module snax_shell #(
   //-------------------------------------------------------------------------
   // DMA generation
   //-------------------------------------------------------------------------
-  if (Xdma) begin : gen_dma
+  // If any HWPE module is declared, the DMA should be present as well.
+  if (Xdma || HwpeMac || HwpeNe16 || HwpeRedmule ) begin : gen_dma
     axi_dma_tc_snitch_fe #(
       .AddrWidth          ( AddrWidth                 ),
       .DataWidth          ( DataWidth                 ),

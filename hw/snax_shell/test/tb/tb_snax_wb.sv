@@ -268,8 +268,6 @@ module tb_snax_wb;
     tcdm_req_t [NumHwpeMemPorts-1:0] hwpe_tcdm_req_o;
     tcdm_rsp_t [NumHwpeMemPorts-1:0] hwpe_tcdm_rsp_i;
 
-    
-
     axi_mst_dma_req_t   axi_dma_req_o;
     axi_mst_dma_resp_t  axi_dma_res_i;
 
@@ -285,7 +283,7 @@ module tb_snax_wb;
     logic [PhysicalAddrWidth-1:0] inst_mem [0:1024];
     logic [PhysicalAddrWidth-1:0] instruction_addr_offset;
 
-	initial begin $readmemh("./mem/inst/mac_test.txt", inst_mem); end
+	initial begin $readmemh("./mem/inst/dma_test.txt", inst_mem); end
 
 	// Dirty fix to offset the instruction memory since boot starts at 4096
 	always_comb begin
@@ -349,6 +347,68 @@ module tb_snax_wb;
     end
 
     assign data_rsp_i.q_ready = (start_mem) ? 1'b1 : 1'b0;
+
+
+    //---------------------------------------------
+    // DMA Control Simulation
+    //---------------------------------------------
+    logic [WideDataWidth-1:0] dma_mem [0:256];
+	initial begin $readmemh("./mem/data/dma_data.txt", dma_mem); end
+
+    // Let's assume that the DMA is always ready to accept inputs
+    // That is it assumes that immediatley in the next cycle we process data.
+    assign axi_dma_res_i.aw_ready = 1'b1;
+    assign axi_dma_res_i.ar_ready = 1'b1;
+    assign axi_dma_res_i.w_ready  = 1'b1;
+    assign axi_dma_res_i.b_valid  =  axi_dma_req_o.w_valid & axi_dma_res_i.w_ready;
+    assign axi_dma_res_i.b        = '0;
+
+    assign axi_dma_res_i.r_valid  = axi_dma_res_i.ar_ready & axi_dma_req_o.ar_valid; //Do this fully combinationally so that we don't have latency delays
+    assign axi_dma_res_i.r.id     = '0;
+    assign axi_dma_res_i.r.data   = dma_mem[axi_dma_req_o.ar.addr >> 9];
+
+    assign axi_dma_res_i.r.resp = 2'b00;
+    assign axi_dma_res_i.r.last = 1'b0;
+    assign axi_dma_res_i.r.user = 1'b0;
+
+    // Need to buffer that address when aw_valid and aw_ready are saved
+    // This is  necessary to make sure that the adderss buffer for the memory part is correct
+    // Note that in this section, we assume that memory has fifo buffers
+    logic [47:0] aw_buffer_addr;
+    always_ff @ (posedge clk_i or posedge rst_ni) begin
+        if(!rst_ni) begin
+            aw_buffer_addr <= '0;
+        end else begin
+            if(axi_dma_res_i.aw_ready & axi_dma_req_o.aw_valid) begin
+                aw_buffer_addr <= axi_dma_req_o.aw.addr;
+            end else begin
+                aw_buffer_addr <= aw_buffer_addr;
+        end
+        end
+    end
+
+    // Synchronous / next cycle updates for writes
+    always_ff @ (posedge clk_i) begin
+        if(axi_dma_res_i.w_ready & axi_dma_req_o.w_valid) begin
+            dma_mem[aw_buffer_addr >> 9] <= axi_dma_req_o.w.data;
+        end
+    end 
+
+    /*
+        axi_dma_res_i.aw_ready <= 0;
+        axi_dma_res_i.ar_ready <= 0;
+        axi_dma_res_i.w_ready  <= 0;
+        axi_dma_res_i.b_valid  <= 0;
+        axi_dma_res_i.b.id     <= 0;
+        axi_dma_res_i.b.resp   <= 0;
+        axi_dma_res_i.b.user   <= 0;
+        axi_dma_res_i.r_valid  <= 0;
+        axi_dma_res_i.r.id     <= 0;
+        axi_dma_res_i.r.data   <= 0;
+        axi_dma_res_i.r.resp   <= 0;
+        axi_dma_res_i.r.last   <= 0;
+        axi_dma_res_i.r.user   <= 0;
+    */
 
     //---------------------------------------------
     // TCDM Data memory
@@ -497,19 +557,7 @@ module tb_snax_wb;
         irq_i.msip  <= 0;
         irq_i.mcip  <= 0;
 
-        axi_dma_res_i.aw_ready <= 0;
-        axi_dma_res_i.ar_ready <= 0;
-        axi_dma_res_i.w_ready  <= 0;
-        axi_dma_res_i.b_valid  <= 0;
-        axi_dma_res_i.b.id     <= 0;
-        axi_dma_res_i.b.resp   <= 0;
-        axi_dma_res_i.b.user   <= 0;
-        axi_dma_res_i.r_valid  <= 0;
-        axi_dma_res_i.r.id     <= 0;
-        axi_dma_res_i.r.data   <= 0;
-        axi_dma_res_i.r.resp   <= 0;
-        axi_dma_res_i.r.last   <= 0;
-        axi_dma_res_i.r.user   <= 0;
+        
 
         @(posedge clk_i);
         @(posedge clk_i);

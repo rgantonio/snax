@@ -40,7 +40,7 @@ add wave -noupdate {/tb_snax_wb/i_snax_shell/gen_hwpe_acc/snax_tcdm[1]/add}
 add wave -noupdate {/tb_snax_wb/i_snax_shell/gen_hwpe_acc/snax_tcdm[1]/wen}
 add wave -noupdate {/tb_snax_wb/i_snax_shell/gen_hwpe_acc/snax_tcdm[1]/be}
 add wave -noupdate {/tb_snax_wb/i_snax_shell/gen_hwpe_acc/snax_tcdm[1]/data}
-add wave -noupdate {/tb_snax_wb/i_snax_shell/gen_hwpe_acc/snax_tcdm[1]/r_data}
+add wave -noupdate -radix unsigned {/tb_snax_wb/i_snax_shell/gen_hwpe_acc/snax_tcdm[1]/r_data}
 add wave -noupdate {/tb_snax_wb/i_snax_shell/gen_hwpe_acc/snax_tcdm[1]/r_valid}
 add wave -noupdate -divider <NULL>
 add wave -noupdate {/tb_snax_wb/i_snax_shell/gen_hwpe_acc/snax_tcdm[3]/clk}
@@ -95,6 +95,8 @@ add wave -noupdate {/tb_snax_wb/i_snax_shell/gen_hwpe_acc/gen_hwpe_mac/i_mac_top
 add wave -noupdate {/tb_snax_wb/i_snax_shell/gen_hwpe_acc/gen_hwpe_mac/i_mac_top/tcdm[3]/r_data}
 add wave -noupdate {/tb_snax_wb/i_snax_shell/gen_hwpe_acc/gen_hwpe_mac/i_mac_top/tcdm[3]/r_valid}
 add wave -noupdate -divider <NULL>
+add wave -noupdate -expand -subitemconfig {{/tb_snax_wb/i_snax_shell/gen_hwpe_acc/local_mem_req[2]} -expand {/tb_snax_wb/i_snax_shell/gen_hwpe_acc/local_mem_req[1]} -expand {/tb_snax_wb/i_snax_shell/gen_hwpe_acc/local_mem_req[0]} -expand} /tb_snax_wb/i_snax_shell/gen_hwpe_acc/local_mem_req
+add wave -noupdate -expand -subitemconfig {{/tb_snax_wb/i_snax_shell/gen_hwpe_acc/local_mem_rsp[2]} -expand {/tb_snax_wb/i_snax_shell/gen_hwpe_acc/local_mem_rsp[1]} -expand} /tb_snax_wb/i_snax_shell/gen_hwpe_acc/local_mem_rsp
 add wave -noupdate -divider <NULL>
 add wave -noupdate -divider <NULL>
 add wave -noupdate -divider <NULL>
@@ -104,7 +106,7 @@ add wave -noupdate -divider <NULL>
 add wave -noupdate -divider <NULL>
 add wave -noupdate -divider <NULL>
 TreeUpdate [SetDefaultTree]
-WaveRestoreCursors {{Cursor 1} {452941 ps} 0}
+WaveRestoreCursors {{Cursor 1} {1861923 ps} 0}
 quietly wave cursor active 1
 configure wave -namecolwidth 711
 configure wave -valuecolwidth 134
