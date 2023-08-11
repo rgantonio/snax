@@ -81,6 +81,9 @@ module tb_snax_wb;
     localparam int unsigned TCDMSize                = NrBanks * TCDMDepth * (NarrowDataWidth/8);
     localparam int unsigned TCDMAddrWidth           = $clog2(TCDMSize); //Default was $clog2(TCDMSize) but we can change to 10 bits for now
 
+    localparam int unsigned NrWideMasters  = 1;
+    localparam int unsigned WideIdWidthOut =  WideIdWidthIn;
+
 
     //---------------------------------------------
     // For generated modules, a 1'b1 means they exist
@@ -112,8 +115,9 @@ module tb_snax_wb;
     typedef logic [PhysicalAddrWidth-1:0] addr_t;
     typedef logic [  NarrowDataWidth-1:0] data_t;
     typedef logic [NarrowDataWidth/8-1:0] strb_t;
-    typedef logic [    TCDMAddrWidth-1:0] tcdm_addr_t;
+    typedef logic [    47:0] tcdm_addr_t; //Watch out for me
     typedef logic [    WideIdWidthIn-1:0] id_dma_mst_t;
+    typedef logic [   WideIdWidthOut-1:0] id_dma_slv_t;
     typedef logic [    WideDataWidth-1:0] data_dma_t;
     typedef logic [  WideDataWidth/8-1:0] strb_dma_t;
     typedef logic [    WideUserWidth-1:0] user_dma_t;
@@ -241,6 +245,7 @@ module tb_snax_wb;
     //---------------------------------------------
 
     `TCDM_TYPEDEF_ALL(tcdm, tcdm_addr_t, data_t, strb_t, tcdm_user_t)
+    `TCDM_TYPEDEF_ALL(tcdm_dma, tcdm_addr_t, data_dma_t, strb_dma_t, logic)
 
     //---------------------------------------------
     // This generates the following:
@@ -249,6 +254,14 @@ module tb_snax_wb;
     //---------------------------------------------
 
     `AXI_TYPEDEF_ALL(axi_mst_dma, addr_t, id_dma_mst_t, data_dma_t, strb_dma_t, user_dma_t)
+    `AXI_TYPEDEF_ALL(axi_slv_dma, addr_t, id_dma_slv_t, data_dma_t, strb_dma_t, user_dma_t)
+
+    //---------------------------------------------
+    // This generates the following:
+    // mem_dma_req_t
+    // mem_dma_rsp_t
+    //---------------------------------------------
+    `MEM_TYPEDEF_ALL(mem_dma, tcdm_addr_t, data_dma_t, strb_dma_t, logic)
 
 
     //---------------------------------------------
@@ -352,64 +365,116 @@ module tb_snax_wb;
     //---------------------------------------------
     // DMA Control Simulation
     //---------------------------------------------
-    logic [WideDataWidth-1:0] dma_mem [0:256];
-	initial begin $readmemh("./mem/data/dma_data.txt", dma_mem); end
+    tcdm_dma_req_t ext_dma_req;
+    tcdm_dma_rsp_t ext_dma_rsp;
 
-    // Let's assume that the DMA is always ready to accept inputs
-    // That is it assumes that immediatley in the next cycle we process data.
-    assign axi_dma_res_i.aw_ready = 1'b1;
-    assign axi_dma_res_i.ar_ready = 1'b1;
-    assign axi_dma_res_i.w_ready  = 1'b1;
-    assign axi_dma_res_i.b_valid  =  axi_dma_req_o.w_valid & axi_dma_res_i.w_ready;
-    assign axi_dma_res_i.b        = '0;
+    addr_t ext_dma_req_q_addr_nontrunc;
+    
 
-    assign axi_dma_res_i.r_valid  = axi_dma_res_i.ar_ready & axi_dma_req_o.ar_valid; //Do this fully combinationally so that we don't have latency delays
-    assign axi_dma_res_i.r.id     = '0;
-    assign axi_dma_res_i.r.data   = dma_mem[axi_dma_req_o.ar.addr >> 9];
+    axi_to_mem_interleaved #(
+        .axi_req_t    ( axi_slv_dma_req_t           ),
+        .axi_resp_t   ( axi_slv_dma_resp_t          ),
+        .AddrWidth    ( PhysicalAddrWidth           ),
+        .DataWidth    ( WideDataWidth               ),
+        .IdWidth      ( WideIdWidthOut              ),
+        .NumBanks     ( 1                           ),
+        .BufDepth     ( 1                           )  // Leave at one for now
+    ) i_axi_to_mem_dma (
+        .clk_i        ( clk_i                       ),
+        .rst_ni       ( rst_ni                      ),
+        .busy_o       (                             ),
+        .axi_req_i    ( axi_dma_req_o               ),
+        .axi_resp_o   ( axi_dma_res_i               ),
+        .mem_req_o    ( ext_dma_req.q_valid         ),
+        .mem_gnt_i    ( ext_dma_rsp.q_ready         ),
+        .mem_addr_o   ( ext_dma_req_q_addr_nontrunc ),
+        .mem_wdata_o  ( ext_dma_req.q.data          ),
+        .mem_strb_o   ( ext_dma_req.q.strb          ),
+        .mem_atop_o   ( /* The DMA does not support atomics */),
+        .mem_we_o     ( ext_dma_req.q.write         ),
+        .mem_rvalid_i ( ext_dma_rsp.p_valid         ),
+        .mem_rdata_i  ( ext_dma_rsp.p.data          )
+    );
 
-    assign axi_dma_res_i.r.resp = 2'b00;
-    assign axi_dma_res_i.r.last = 1'b0;
-    assign axi_dma_res_i.r.user = 1'b0;
+    assign ext_dma_req.q.addr = tcdm_addr_t'(ext_dma_req_q_addr_nontrunc);
+    assign ext_dma_req.q.amo  = reqrsp_pkg::AMONone;
+    assign ext_dma_req.q.user = '0;
 
-    // Need to buffer that address when aw_valid and aw_ready are saved
-    // This is  necessary to make sure that the adderss buffer for the memory part is correct
-    // Note that in this section, we assume that memory has fifo buffers
-    logic [47:0] aw_buffer_addr;
-    always_ff @ (posedge clk_i or posedge rst_ni) begin
-        if(!rst_ni) begin
-            aw_buffer_addr <= '0;
-        end else begin
-            if(axi_dma_res_i.aw_ready & axi_dma_req_o.aw_valid) begin
-                aw_buffer_addr <= axi_dma_req_o.aw.addr;
-            end else begin
-                aw_buffer_addr <= aw_buffer_addr;
-        end
-        end
-    end
+    mem_dma_req_t sb_dma_req;
+    mem_dma_rsp_t sb_dma_rsp;
 
-    // Synchronous / next cycle updates for writes
-    always_ff @ (posedge clk_i) begin
-        if(axi_dma_res_i.w_ready & axi_dma_req_o.w_valid) begin
-            dma_mem[aw_buffer_addr >> 9] <= axi_dma_req_o.w.data;
-        end
-    end 
+    snitch_tcdm_interconnect #(
+        .NumInp                 ( 1                  ),
+        .NumOut                 ( 1                  ),
+        .tcdm_req_t             ( tcdm_dma_req_t     ),
+        .tcdm_rsp_t             ( tcdm_dma_rsp_t     ),
+        .mem_req_t              ( mem_dma_req_t      ),
+        .mem_rsp_t              ( mem_dma_rsp_t      ),
+        .user_t                 ( logic              ),
+        .MemAddrWidth           ( 10                 ),
+        .DataWidth              ( WideDataWidth      ),
+        .MemoryResponseLatency  ( 1                  )
+    ) i_dma_interconnect (
+        .clk_i                  ( clk_i              ),
+        .rst_ni                 ( rst_ni             ),
+        .req_i                  ( ext_dma_req        ),
+        .rsp_o                  ( ext_dma_rsp        ),
+        .mem_req_o              ( sb_dma_req         ),
+        .mem_rsp_i              ( sb_dma_rsp         )
+    );
+    
 
-    /*
-        axi_dma_res_i.aw_ready <= 0;
-        axi_dma_res_i.ar_ready <= 0;
-        axi_dma_res_i.w_ready  <= 0;
-        axi_dma_res_i.b_valid  <= 0;
-        axi_dma_res_i.b.id     <= 0;
-        axi_dma_res_i.b.resp   <= 0;
-        axi_dma_res_i.b.user   <= 0;
-        axi_dma_res_i.r_valid  <= 0;
-        axi_dma_res_i.r.id     <= 0;
-        axi_dma_res_i.r.data   <= 0;
-        axi_dma_res_i.r.resp   <= 0;
-        axi_dma_res_i.r.last   <= 0;
-        axi_dma_res_i.r.user   <= 0;
-    */
+    parameter int unsigned LocalMemSize       = 1024;
+    parameter int unsigned LocalMemAddrWidth  = $clog2(LocalMemSize);
 
+    typedef logic [LocalMemAddrWidth-1:0] mem_addr_t;
+    typedef logic                  [31:0] mem_data_t;
+    typedef logic                  [ 3:0] mem_strb_t;
+
+    `MEM_TYPEDEF_ALL(mem, mem_addr_t, mem_data_t, mem_strb_t, tcdm_user_t)
+
+    mem_req_t [15:0] dma_mem_req;
+    mem_rsp_t [15:0]dma_mem_rsp;
+
+    mem_wide_narrow_mux #(
+      .NarrowDataWidth  ( 32                ), // TODO: Fix me later
+      .WideDataWidth    ( WideDataWidth     ),
+      .mem_narrow_req_t ( mem_req_t         ),
+      .mem_narrow_rsp_t ( mem_rsp_t         ),
+      .mem_wide_req_t   ( mem_dma_req_t     ),
+      .mem_wide_rsp_t   ( mem_dma_rsp_t     )
+    ) i_mem_wide_narrow_mux (
+      .clk_i,
+      .rst_ni,
+      .in_narrow_req_i  ( '0 ),
+      .in_narrow_rsp_o  (  ),
+      .in_wide_req_i    ( sb_dma_req         ),
+      .in_wide_rsp_o    ( sb_dma_rsp         ), // TODO: Add me later
+      .out_req_o        ( dma_mem_req        ),
+      .out_rsp_i        ( dma_mem_rsp        ),
+      .sel_wide_i       ( sb_dma_req.q_valid )  // TODO: Add me later
+    );
+
+    snax_local_mem_mux #(
+      .LocalMemAddrWidth  ( LocalMemAddrWidth    ),
+      .NarrowDataWidth    ( 32                   ),
+      .WideDataWidth      ( WideDataWidth        ),
+      .LocalMemSize       ( LocalMemSize         ),
+      .NumBanks           ( 16                   ), // Need to maximize banks depending on WideDataWidth
+      .SimInit            ( "random"             ),
+      .addr_t             ( mem_addr_t           ),
+      .data_t             ( mem_data_t           ),
+      .strb_t             ( mem_strb_t           ),
+      .mem_req_t          ( mem_req_t            ), // Memory request payload type, usually write enable, write data, etc.
+      .mem_rsp_t          ( mem_rsp_t            )  // Memory response payload type, usually read data
+    ) i_snax_local_mem_mux (
+      .clk_i              ( clk_i                ), // Clock
+      .rst_ni             ( rst_ni               ), // Asynchronous reset, active low
+      .dma_access_i       ( sb_dma_req.q_valid   ),
+      .mem_req_i          ( dma_mem_req          ), // Memory valid-ready format
+      .mem_rsp_o          ( dma_mem_rsp          )  // Memory valid-ready format local_mem_narrow_rsp
+    );
+    
     //---------------------------------------------
     // TCDM Data memory
     //---------------------------------------------

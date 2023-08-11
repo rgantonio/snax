@@ -11,7 +11,7 @@ addi x2, x2, 512 #dst addr
 addi x2, x2, 512 #dst addr
 addi x2, x2, 512 #dst addr
 addi x3, x0, 64  #consec bytes to transfer
-addi x4, x0, 10  #repeat
+addi x4, x0, 5   #repeat
 addi x5, x0, 2   #config
 addi x6, x0, 512 #stride size
 addi x8, x0, 512
