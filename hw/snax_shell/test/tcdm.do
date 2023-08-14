@@ -95,8 +95,41 @@ add wave -noupdate {/tb_snax_wb/i_snax_shell/gen_hwpe_acc/gen_hwpe_mac/i_mac_top
 add wave -noupdate {/tb_snax_wb/i_snax_shell/gen_hwpe_acc/gen_hwpe_mac/i_mac_top/tcdm[3]/r_data}
 add wave -noupdate {/tb_snax_wb/i_snax_shell/gen_hwpe_acc/gen_hwpe_mac/i_mac_top/tcdm[3]/r_valid}
 add wave -noupdate -divider <NULL>
-add wave -noupdate -expand -subitemconfig {{/tb_snax_wb/i_snax_shell/gen_hwpe_acc/local_mem_req[2]} -expand {/tb_snax_wb/i_snax_shell/gen_hwpe_acc/local_mem_req[1]} -expand {/tb_snax_wb/i_snax_shell/gen_hwpe_acc/local_mem_req[0]} -expand} /tb_snax_wb/i_snax_shell/gen_hwpe_acc/local_mem_req
-add wave -noupdate -expand -subitemconfig {{/tb_snax_wb/i_snax_shell/gen_hwpe_acc/local_mem_rsp[2]} -expand {/tb_snax_wb/i_snax_shell/gen_hwpe_acc/local_mem_rsp[1]} -expand} /tb_snax_wb/i_snax_shell/gen_hwpe_acc/local_mem_rsp
+add wave -noupdate /tb_snax_wb/i_snax_shell/gen_hwpe_acc/local_mem_req
+add wave -noupdate /tb_snax_wb/i_snax_shell/gen_hwpe_acc/local_mem_rsp
+add wave -noupdate -divider <NULL>
+add wave -noupdate -expand /tb_snax_wb/i_snax_shell/i_snitch/i_snitch_regfile/mem
+add wave -noupdate -divider {clk and instr}
+add wave -noupdate /tb_snax_wb/i_snax_shell/gen_hwpe_acc/gen_hwpe_mac/i_mac_top/clk_i
+add wave -noupdate /tb_snax_wb/i_snax_shell/i_snitch/inst_data_i
+add wave -noupdate -divider {relevant snitch reg}
+add wave -noupdate -radix unsigned {/tb_snax_wb/i_snax_shell/i_snitch/i_snitch_regfile/mem[6]}
+add wave -noupdate -radix unsigned {/tb_snax_wb/i_snax_shell/i_snitch/i_snitch_regfile/mem[5]}
+add wave -noupdate -radix unsigned {/tb_snax_wb/i_snax_shell/i_snitch/i_snitch_regfile/mem[4]}
+add wave -noupdate -radix unsigned {/tb_snax_wb/i_snax_shell/i_snitch/i_snitch_regfile/mem[3]}
+add wave -noupdate -radix unsigned {/tb_snax_wb/i_snax_shell/i_snitch/i_snitch_regfile/mem[2]}
+add wave -noupdate -radix unsigned {/tb_snax_wb/i_snax_shell/i_snitch/i_snitch_regfile/mem[1]}
+add wave -noupdate -radix unsigned {/tb_snax_wb/i_snax_shell/i_snitch/i_snitch_regfile/mem[0]}
+add wave -noupdate -divider {stream A}
+add wave -noupdate {/tb_snax_wb/i_snax_shell/gen_hwpe_acc/gen_hwpe_mac/i_mac_top/tcdm[0]/req}
+add wave -noupdate {/tb_snax_wb/i_snax_shell/gen_hwpe_acc/gen_hwpe_mac/i_mac_top/tcdm[0]/gnt}
+add wave -noupdate -radix unsigned {/tb_snax_wb/i_snax_shell/gen_hwpe_acc/gen_hwpe_mac/i_mac_top/tcdm[0]/add}
+add wave -noupdate -radix unsigned {/tb_snax_wb/i_snax_shell/gen_hwpe_acc/gen_hwpe_mac/i_mac_top/tcdm[0]/r_data}
+add wave -noupdate -divider {stream B}
+add wave -noupdate {/tb_snax_wb/i_snax_shell/gen_hwpe_acc/gen_hwpe_mac/i_mac_top/tcdm[1]/req}
+add wave -noupdate {/tb_snax_wb/i_snax_shell/gen_hwpe_acc/gen_hwpe_mac/i_mac_top/tcdm[1]/gnt}
+add wave -noupdate -radix unsigned {/tb_snax_wb/i_snax_shell/gen_hwpe_acc/gen_hwpe_mac/i_mac_top/tcdm[1]/add}
+add wave -noupdate -radix unsigned {/tb_snax_wb/i_snax_shell/gen_hwpe_acc/gen_hwpe_mac/i_mac_top/tcdm[1]/r_data}
+add wave -noupdate -divider {stream C}
+add wave -noupdate {/tb_snax_wb/i_snax_shell/gen_hwpe_acc/gen_hwpe_mac/i_mac_top/tcdm[2]/req}
+add wave -noupdate {/tb_snax_wb/i_snax_shell/gen_hwpe_acc/gen_hwpe_mac/i_mac_top/tcdm[2]/gnt}
+add wave -noupdate -radix unsigned {/tb_snax_wb/i_snax_shell/gen_hwpe_acc/gen_hwpe_mac/i_mac_top/tcdm[2]/add}
+add wave -noupdate -radix unsigned {/tb_snax_wb/i_snax_shell/gen_hwpe_acc/gen_hwpe_mac/i_mac_top/tcdm[2]/r_data}
+add wave -noupdate -divider {stream D}
+add wave -noupdate {/tb_snax_wb/i_snax_shell/gen_hwpe_acc/gen_hwpe_mac/i_mac_top/tcdm[3]/req}
+add wave -noupdate {/tb_snax_wb/i_snax_shell/gen_hwpe_acc/gen_hwpe_mac/i_mac_top/tcdm[3]/gnt}
+add wave -noupdate -radix unsigned {/tb_snax_wb/i_snax_shell/gen_hwpe_acc/gen_hwpe_mac/i_mac_top/tcdm[3]/add}
+add wave -noupdate -radix unsigned {/tb_snax_wb/i_snax_shell/gen_hwpe_acc/gen_hwpe_mac/i_mac_top/tcdm[3]/r_data}
 add wave -noupdate -divider <NULL>
 add wave -noupdate -divider <NULL>
 add wave -noupdate -divider <NULL>
@@ -106,10 +139,10 @@ add wave -noupdate -divider <NULL>
 add wave -noupdate -divider <NULL>
 add wave -noupdate -divider <NULL>
 TreeUpdate [SetDefaultTree]
-WaveRestoreCursors {{Cursor 1} {1861923 ps} 0}
+WaveRestoreCursors {{Cursor 1} {630000 ps} 0}
 quietly wave cursor active 1
-configure wave -namecolwidth 711
-configure wave -valuecolwidth 134
+configure wave -namecolwidth 512
+configure wave -valuecolwidth 59
 configure wave -justifyvalue left
 configure wave -signalnamewidth 0
 configure wave -snapdistance 10
@@ -122,4 +155,4 @@ configure wave -griddelta 40
 configure wave -timeline 0
 configure wave -timelineunits ns
 update
-WaveRestoreZoom {0 ps} {2100 ns}
+WaveRestoreZoom {550354 ps} {1275337 ps}
