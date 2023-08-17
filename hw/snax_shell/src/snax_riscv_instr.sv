@@ -1204,6 +1204,6 @@ package snax_riscv_instr;
   localparam logic [11:0] CSR_MIMPID          = 12'hf13;
   localparam logic [11:0] CSR_MHARTID         = 12'hf14;
 
-  
+
 endpackage
 // verilog_lint: waive-stop parameter-name-style
