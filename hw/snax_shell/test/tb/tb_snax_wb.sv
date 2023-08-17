@@ -434,7 +434,7 @@ module tb_snax_wb;
     `MEM_TYPEDEF_ALL(mem, mem_addr_t, mem_data_t, mem_strb_t, tcdm_user_t)
 
     mem_req_t [15:0] dma_mem_req;
-    mem_rsp_t [15:0]dma_mem_rsp;
+    mem_rsp_t [15:0] dma_mem_rsp;
 
     mem_wide_narrow_mux #(
       .NarrowDataWidth  ( 32                ), // TODO: Fix me later
@@ -584,8 +584,11 @@ module tb_snax_wb;
       .axi_dma_perf_o         (                         ), // Leave this unused first
       .axi_dma_events_o       (                         ), // Leave this unused first
       .core_events_o          (                         ), // Leave this unused first
-      .tcdm_addr_base_i       ( 48'h0000_0000_1000      )  // TODO: Fix me later. Assume starting is at 0 first
+      .tcdm_addr_base_i       ( 48'h0000_0000_1000      ), // TODO: Fix me later. Assume starting is at 0 first
+      .localmem_addr_base_i   ( 48'h0000_0000_1000      )
     );
+
+    
 
 
     //---------------------------------------------

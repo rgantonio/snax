@@ -10,13 +10,17 @@ addi x2, x2, 512 #dst addr
 addi x2, x2, 512 #dst addr
 addi x2, x2, 512 #dst addr
 addi x2, x2, 512 #dst addr
+addi x2, x2, 512 #dst addr
+addi x2, x2, 512 #dst addr
+addi x2, x2, 512 #dst addr
+addi x2, x2, 512 #dst addr
 addi x3, x0, 64  #consec bytes to transfer
-addi x4, x0, 5   #repeat
-addi x5, x0, 2   #config
-addi x6, x0, 512 #stride size
-addi x8, x0, 512
-dmsrc x1, x0
-dmdst x2, x0
+addi x4, x0, 10  #repeat
+addi x5, x0, 3   #config
+addi x6, x0, 128 #stride size
+addi x8, x0, 128
+dmsrc x2, x0
+dmdst x1, x0
 dmrep x4
 dmstr x6, x8
 dmcpy x7, x3, x5
