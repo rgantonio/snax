@@ -29,6 +29,15 @@
 /users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/common_cells-02aa01ee4a3b2e52/src/popcount.sv
 /users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/common_cells-02aa01ee4a3b2e52/src/delta_counter.sv
 /users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/common_cells-02aa01ee4a3b2e52/src/counter.sv
+/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/common_cells-02aa01ee4a3b2e52/src/shift_reg.sv
+/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/common_cells-02aa01ee4a3b2e52/src/shift_reg_gated.sv
+/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/common_cells-02aa01ee4a3b2e52/src/stream_xbar.sv
+/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/common_cells-02aa01ee4a3b2e52/src/mem_to_banks_detailed.sv
+/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/common_cells-02aa01ee4a3b2e52/src/mem_to_banks.sv
+/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/common_cells-02aa01ee4a3b2e52/src/stream_fork.sv
+/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/common_cells-02aa01ee4a3b2e52/src/stream_intf.sv
+/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/common_cells-02aa01ee4a3b2e52/src/stream_join.sv
+/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/common_cells-02aa01ee4a3b2e52/src/stream_fork_dynamic.sv
 
 #--------------------------------------------
 # Tech cells
@@ -42,6 +51,8 @@
 /users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/axi-10c18867bc585e38/src/axi_pkg.sv
 /users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/axi-10c18867bc585e38/src/axi_intf.sv
 /users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/axi-10c18867bc585e38/src/axi_demux.sv
+/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/axi-10c18867bc585e38/src/axi_to_mem.sv
+/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/axi-10c18867bc585e38/src/axi_to_mem_interleaved.sv
 
 #--------------------------------------------
 # Floating point components
@@ -281,6 +292,11 @@
 /users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/hw/snitch_cluster/src/snitch_clkdiv2.sv
 /users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/hw/snitch_cluster/src/snitch_hive.sv
 /users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/hw/snitch_cluster/src/snitch_cluster.sv
+
+#--------------------------------------------
+# Remodel components
+#--------------------------------------------
+/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/hw/remodel/src/remodel_tc_sram.sv
 
 #--------------------------------------------
 # Snax components

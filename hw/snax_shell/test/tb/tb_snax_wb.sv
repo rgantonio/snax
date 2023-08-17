@@ -461,6 +461,8 @@ module tb_snax_wb;
       .WideDataWidth      ( WideDataWidth        ),
       .LocalMemSize       ( LocalMemSize         ),
       .NumBanks           ( 16                   ), // Need to maximize banks depending on WideDataWidth
+      .ReadMem            ( 1'b1                 ),
+      .ReadMemFile        ( "./mem/data/data_mem.txt"),
       .SimInit            ( "random"             ),
       .addr_t             ( mem_addr_t           ),
       .data_t             ( mem_data_t           ),
