@@ -335,26 +335,6 @@ module remodel_tc_sram #(
 
 endmodule
 
-parameter int unsigned NumWords     = 32'd1024, // Number of Words in data array
-  parameter int unsigned DataWidth    = 32'd128,  // Data signal width
-  parameter int unsigned ByteWidth    = 32'd8,    // Width of a data byte
-  parameter int unsigned NumPorts     = 32'd2,    // Number of read and write ports
-  parameter int unsigned Latency      = 32'd1,    // Latency when the read data is available
-  parameter              SimInit      = "none",   // Simulation initialization
-  parameter              ReadMem      = 1'b0,
-  parameter              ReadMemFile  = "none",
-  parameter bit          PrintSimCfg  = 1'b0,     // Print configuration
-  parameter              ImplKey      = "none",   // Reference to specific implementation
-  parameter type         impl_in_t    = logic,    // Type for implementation inputs
-  parameter type         impl_out_t   = logic,    // Type for implementation outputs
-  parameter impl_out_t   ImplOutSim   = 'X,       // Implementation output in simulation
-  // DEPENDENT PARAMETERS, DO NOT OVERWRITE!
-  parameter int unsigned AddrWidth    = (NumWords > 32'd1) ? $clog2(NumWords) : 32'd1,  // The Address width is log2() of number of words
-  parameter int unsigned BeWidth      = (DataWidth + ByteWidth - 32'd1) / ByteWidth,    // ceil_div
-  parameter type         addr_t       = logic [AddrWidth-1:0],
-  parameter type         data_t       = logic [DataWidth-1:0],
-  parameter type         be_t         = logic [  BeWidth-1:0]
-
 /* ------------------ Module usage ------------------
 
 remodel_tc_sram #(
