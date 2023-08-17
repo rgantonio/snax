@@ -51,7 +51,7 @@ module snax_local_mem_mux #(
     // You can find this in tech cells repository: .bender/git/tech_cells_*/src/rtl
     tc_sram_impl #(
       .NumWords  ( LocalMemSize       ),
-      .DataWidth ( 32                 ),
+      .DataWidth ( NarrowDataWidth    ),
       .ByteWidth ( 8                  ),
       .NumPorts  ( 1                  ),
       .Latency   ( 0                  ),
