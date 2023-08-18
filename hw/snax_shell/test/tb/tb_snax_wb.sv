@@ -65,7 +65,7 @@ module tb_snax_wb;
     parameter int unsigned NumSsrs                  = 3;
     parameter int unsigned SsrMuxRespDepth          = 4;
 
-    parameter int unsigned NumHwpeMemPorts          = 4;
+    parameter int unsigned SnaxLocalMemPorts        = 4;
 
     parameter int unsigned RegisterOffloadReq       = 0;
     parameter int unsigned RegisterOffloadRsp       = 0;
@@ -98,15 +98,13 @@ module tb_snax_wb;
     parameter bit XF8ALT      = 1'b0;
     parameter bit XFVEC       = 1'b0;
     parameter bit XFDOTP      = 1'b0;
-    parameter bit Xdma        = 1'b1;
+    parameter bit Xdma        = 1'b0;
     parameter bit IsoCrossing = 1'b0;
     parameter bit Xfrep       = 1'b0;
     parameter bit Xssr        = 1'b0;
     parameter bit Xipu        = 1'b0;
     parameter bit VMSupport   = 1'b0;
-    parameter bit HwpeMac     = 1'b1;
-    parameter bit HwpeNe16    = 1'b0;
-    parameter bit HwpeRedmule = 1'b0;
+    parameter bit SNAX        = 1'b1;
 
     //---------------------------------------------
     // Necessary type definitions
@@ -278,11 +276,24 @@ module tb_snax_wb;
     tcdm_req_t [NumSsrs-1:0] tcdm_req_o;
     tcdm_rsp_t [NumSsrs-1:0] tcdm_rsp_i;
 
-    tcdm_req_t [NumHwpeMemPorts-1:0] hwpe_tcdm_req_o;
-    tcdm_rsp_t [NumHwpeMemPorts-1:0] hwpe_tcdm_rsp_i;
+    tcdm_req_t [SnaxLocalMemPorts-1:0] hwpe_tcdm_req_o;
+    tcdm_rsp_t [SnaxLocalMemPorts-1:0] hwpe_tcdm_rsp_i;
 
     axi_mst_dma_req_t   axi_dma_req_o;
     axi_mst_dma_resp_t  axi_dma_res_i;
+
+		//---------------------------------------------
+    // SNAX wiring
+    //---------------------------------------------
+		acc_req_t 	snax_req;
+		logic 			snax_qvalid;
+		logic 			snax_qready;
+		acc_rsp_t 	snax_resp;
+		logic 			snax_pvalid;
+		logic 			snax_pready;
+		tcdm_req_t 	[SnaxLocalMemPorts-1:0 ] snax_tcdm_req;
+		tcdm_rsp_t 	[SnaxLocalMemPorts-1:0 ] snax_tcdm_rsp;
+
 
     //---------------------------------------------
     // Clock and reset
@@ -296,7 +307,7 @@ module tb_snax_wb;
     logic [PhysicalAddrWidth-1:0] inst_mem [0:1024];
     logic [PhysicalAddrWidth-1:0] instruction_addr_offset;
 
-	initial begin $readmemh("./mem/inst/dma_test.txt", inst_mem); end
+	initial begin $readmemh("./mem/inst/mac_test.txt", inst_mem); end
 
 	// Dirty fix to offset the instruction memory since boot starts at 4096
 	always_comb begin
@@ -369,7 +380,6 @@ module tb_snax_wb;
     tcdm_dma_rsp_t ext_dma_rsp;
 
     addr_t ext_dma_req_q_addr_nontrunc;
-    
 
     axi_to_mem_interleaved #(
         .axi_req_t    ( axi_slv_dma_req_t           ),
@@ -476,29 +486,6 @@ module tb_snax_wb;
       .mem_req_i          ( dma_mem_req          ), // Memory valid-ready format
       .mem_rsp_o          ( dma_mem_rsp          )  // Memory valid-ready format local_mem_narrow_rsp
     );
-    
-    //---------------------------------------------
-    // TCDM Data memory
-    //---------------------------------------------
-
-    /*
-    genvar i;
-    for( i=0; i<NumHwpeMemPorts; i++ ) begin
-        tb_snax_dummy_memory #(
-            .MemoryWidth  ( NarrowDataWidth    ), 
-            .MemorySize   ( 1024               ),
-            .tcdm_req_t   ( tcdm_req_t         ),
-            .tcdm_rsp_t   ( tcdm_rsp_t         ),
-            .ForceInitVal ( 1                  ),
-            .InitVal      ( "./mem/data/hwpe_data_mem_1.txt" )
-        ) i_tb_dummy_memory (
-            .clk_i        ( clk_i              ),
-            .rst_ni       ( rst_ni             ),
-            .data_req_i   ( hwpe_tcdm_req_o[i] ),
-            .data_rsp_o   ( hwpe_tcdm_rsp_i[i] )
-        );
-    end
-    */
 
     //---------------------------------------------
     // Main snax shell module
@@ -541,9 +528,7 @@ module tb_snax_wb;
       .Xssr                   ( Xssr                    ),
       .Xipu                   ( Xipu                    ),
       .VMSupport              ( VMSupport               ),
-      .HwpeMac                ( HwpeMac                 ),
-      .HwpeNe16               ( HwpeNe16                ),
-      .HwpeRedmule            ( HwpeRedmule             ),
+      .SNAX                   ( SNAX                    ),
       .NumIntOutstandingLoads ( NumIntOutstandingLoads  ),
       .NumIntOutstandingMem   ( NumIntOutstandingMem    ),
       .NumFPOutstandingLoads  ( NumFPOutstandingLoads   ),
@@ -553,7 +538,7 @@ module tb_snax_wb;
       .NumITLBEntries         ( NumITLBEntries          ),
       .NumSequencerInstr      ( NumSequencerInstr       ),
       .NumSsrs                ( NumSsrs                 ),
-      .NumHwpeMemPorts        ( NumHwpeMemPorts         ),
+      .SnaxLocalMemPorts      ( SnaxLocalMemPorts       ),
       .SsrMuxRespDepth        ( SsrMuxRespDepth         ),
       .SsrCfgs                ( '0                      ), //TODO: Fix me later
       .SsrRegs                ( '0                      ), //TODO: Fix me later
@@ -586,9 +571,38 @@ module tb_snax_wb;
       .axi_dma_perf_o         (                         ), // Leave this unused first
       .axi_dma_events_o       (                         ), // Leave this unused first
       .core_events_o          (                         ), // Leave this unused first
+			.snax_req_o         		( snax_req        			  ),
+			.snax_qvalid_o      		( snax_qvalid     			  ),
+			.snax_qready_i      		( snax_qready     			  ),
+			.snax_resp_i        		( snax_resp       			  ),
+			.snax_pvalid_i      		( snax_pvalid     			  ),
+			.snax_pready_o      		( snax_pready     			  ),
+			.snax_tcdm_req_i    		( snax_tcdm_req   			  ),
+			.snax_tcdm_rsp_o    		( snax_tcdm_rsp   			  ),
       .tcdm_addr_base_i       ( 48'h0000_0000_1000      ), // TODO: Fix me later. Assume starting is at 0 first
       .localmem_addr_base_i   ( 48'h0000_0000_1000      )
     );
+
+
+		snax_mac # (
+			.DataWidth          ( 32         				),
+			.SnaxLocalMemPorts  ( SnaxLocalMemPorts	),
+			.acc_req_t          ( acc_req_t       	),
+			.acc_rsp_t         	( acc_rsp_t      		),
+			.tcdm_req_t         ( tcdm_req_t      	),
+			.tcdm_rsp_t         ( tcdm_rsp_t      	)
+		) i_snax_mac (
+			.clk_i              ( clk_i           	),
+			.rst_ni             ( rst_ni          	),
+			.snax_req_i         ( snax_req        	),
+			.snax_qvalid_i      ( snax_qvalid     	),
+			.snax_qready_o      ( snax_qready     	),
+			.snax_resp_o        ( snax_resp       	),
+			.snax_pvalid_o      ( snax_pvalid     	),
+			.snax_pready_i      ( snax_pready     	),
+			.snax_tcdm_req_o    ( snax_tcdm_req   	),
+			.snax_tcdm_rsp_i    ( snax_tcdm_rsp   	)
+		);
 
     
 
