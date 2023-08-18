@@ -168,53 +168,6 @@
 
 
 #--------------------------------------------
-# NE16 Components
-#--------------------------------------------
-/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/ne16-cdbdbc3d36d10302/rtl/ne16_package.sv
-/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/ne16-cdbdbc3d36d10302/rtl/accumulator/ne16_accumulator_scm_test_wrap.sv
-/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/ne16-cdbdbc3d36d10302/rtl/input_buffer/ne16_input_buffer_scm_test_wrap.sv
-/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/ne16-cdbdbc3d36d10302/rtl/accumulator/ne16_accumulator_scm.sv
-/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/ne16-cdbdbc3d36d10302/rtl/accumulator/ne16_accumulator_normquant.sv
-/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/ne16-cdbdbc3d36d10302/rtl/accumulator/ne16_normquant.sv
-/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/ne16-cdbdbc3d36d10302/rtl/accumulator/ne16_normquant_shifter.sv
-/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/ne16-cdbdbc3d36d10302/rtl/accumulator/ne16_normquant_bias.sv
-/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/ne16-cdbdbc3d36d10302/rtl/accumulator/ne16_normquant_multiplier.sv
-/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/ne16-cdbdbc3d36d10302/rtl/input_buffer/ne16_input_buffer_scm.sv
-/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/ne16-cdbdbc3d36d10302/rtl/input_buffer/ne16_input_buffer.sv
-/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/ne16-cdbdbc3d36d10302/rtl/array/ne16_scale.sv
-/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/ne16-cdbdbc3d36d10302/rtl/array/ne16_binconv_block.sv
-/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/ne16-cdbdbc3d36d10302/rtl/array/ne16_binconv_column.sv
-/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/ne16-cdbdbc3d36d10302/rtl/array/ne16_binconv_array.sv
-/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/ne16-cdbdbc3d36d10302/rtl/ctrl/ne16_ctrl_fsm.sv
-/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/ne16-cdbdbc3d36d10302/rtl/ctrl/ne16_ctrl.sv
-/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/ne16-cdbdbc3d36d10302/rtl/ne16_engine.sv
-/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/ne16-cdbdbc3d36d10302/rtl/ne16_streamer.sv
-/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/ne16-cdbdbc3d36d10302/rtl/ne16_top.sv
-/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/ne16-cdbdbc3d36d10302/rtl/ne16_top_wrap.sv
-
-
-#--------------------------------------------
-# Redmule Components
-#--------------------------------------------
-/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/redmule-ed31832a0a440825/rtl/redmule_pkg.sv
-/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/redmule-ed31832a0a440825/rtl/redmule_ctrl.sv
-/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/redmule-ed31832a0a440825/rtl/redmule_scheduler.sv
-/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/redmule-ed31832a0a440825/rtl/redmule_castin.sv
-/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/redmule-ed31832a0a440825/rtl/redmule_castout.sv
-/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/redmule-ed31832a0a440825/rtl/redmule_streamer.sv
-/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/redmule-ed31832a0a440825/rtl/redmule_x_buffer.sv
-/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/redmule-ed31832a0a440825/rtl/redmule_w_buffer.sv
-/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/redmule-ed31832a0a440825/rtl/redmule_z_buffer.sv
-/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/redmule-ed31832a0a440825/rtl/redmule_fma.sv
-/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/redmule-ed31832a0a440825/rtl/redmule_noncomp.sv
-/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/redmule-ed31832a0a440825/rtl/redmule_ce.sv
-/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/redmule-ed31832a0a440825/rtl/redmule_row.sv
-/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/redmule-ed31832a0a440825/rtl/redmule_engine.sv
-/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/redmule-ed31832a0a440825/rtl/redmule_top.sv
-/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/redmule-ed31832a0a440825/rtl/redmule_wrap.sv
-
-
-#--------------------------------------------
 # Core Snitch Components
 #--------------------------------------------
 +incdir+/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/hw/reqrsp_interface/include
@@ -292,6 +245,12 @@
 /users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/hw/snitch_cluster/src/snitch_clkdiv2.sv
 /users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/hw/snitch_cluster/src/snitch_hive.sv
 /users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/hw/snitch_cluster/src/snitch_cluster.sv
+
+
+#--------------------------------------------
+# Accelerator wrappers
+#--------------------------------------------
+/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/hw/snax_acc/snax_mac.sv
 
 #--------------------------------------------
 # Remodel components
