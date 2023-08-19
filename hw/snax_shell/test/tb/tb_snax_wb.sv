@@ -307,7 +307,7 @@ module tb_snax_wb;
     logic [PhysicalAddrWidth-1:0] inst_mem [0:1024];
     logic [PhysicalAddrWidth-1:0] instruction_addr_offset;
 
-	initial begin $readmemh("./mem/inst/mac_test.txt", inst_mem); end
+	initial begin $readmemh("./mem/inst/dma_mac_test.txt", inst_mem); end
 
 	// Dirty fix to offset the instruction memory since boot starts at 4096
 	always_comb begin
@@ -406,7 +406,7 @@ module tb_snax_wb;
         .mem_rdata_i  ( ext_dma_rsp.p.data          )
     );
 
-    assign ext_dma_req.q.addr = tcdm_addr_t'(ext_dma_req_q_addr_nontrunc);
+    assign ext_dma_req.q.addr = tcdm_addr_t'(ext_dma_req_q_addr_nontrunc - 4096);
     assign ext_dma_req.q.amo  = reqrsp_pkg::AMONone;
     assign ext_dma_req.q.user = '0;
 

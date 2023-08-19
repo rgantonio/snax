@@ -57,8 +57,8 @@ add wave -noupdate /tb_snax_wb/i_snax_mac/clk_i
 add wave -noupdate /tb_snax_wb/i_snax_mac/rst_ni
 add wave -noupdate /tb_snax_wb/i_snax_mac/snax_qvalid_i
 add wave -noupdate /tb_snax_wb/i_snax_mac/snax_qready_o
-add wave -noupdate -expand /tb_snax_wb/i_snax_mac/snax_req_i
-add wave -noupdate -expand /tb_snax_wb/i_snax_mac/snax_resp_o
+add wave -noupdate /tb_snax_wb/i_snax_mac/snax_req_i
+add wave -noupdate /tb_snax_wb/i_snax_mac/snax_resp_o
 add wave -noupdate /tb_snax_wb/i_snax_mac/snax_pvalid_o
 add wave -noupdate /tb_snax_wb/i_snax_mac/snax_pready_i
 add wave -noupdate /tb_snax_wb/i_snax_mac/snax_tcdm_req_o
@@ -108,10 +108,10 @@ add wave -noupdate -divider <NULL>
 add wave -noupdate -divider <NULL>
 add wave -noupdate -divider <NULL>
 TreeUpdate [SetDefaultTree]
-WaveRestoreCursors {{Cursor 1} {424195 ps} 0}
+WaveRestoreCursors {{Cursor 1} {727963 ps} 0}
 quietly wave cursor active 1
-configure wave -namecolwidth 593
-configure wave -valuecolwidth 175
+configure wave -namecolwidth 396
+configure wave -valuecolwidth 79
 configure wave -justifyvalue left
 configure wave -signalnamewidth 0
 configure wave -snapdistance 10
@@ -124,4 +124,4 @@ configure wave -griddelta 40
 configure wave -timeline 0
 configure wave -timelineunits ns
 update
-WaveRestoreZoom {0 ps} {1050 ns}
+WaveRestoreZoom {654118 ps} {987513 ps}

@@ -419,7 +419,7 @@ module snax_shell #(
   //-------------------------------
   // If any HWPE module is declared, the DMA should be present as well.
   // TODO: Think about how to elegantly encode this.
-  if ( SNAX ) begin : gen_snitch_dma
+  if ( SNAX ) begin : gen_snax_dma
 
     axi_dma_tc_snitch_fe #(
       .AddrWidth          ( AddrWidth                 ),
@@ -456,7 +456,7 @@ module snax_shell #(
       .dma_events_o       ( axi_dma_events_o          )
     );
 
-  end else if ( Xdma ) begin: gen_snax_dma
+  end else if ( Xdma ) begin: gen_snitch_dma
 
     axi_dma_tc_snitch_fe #(
       .AddrWidth          ( AddrWidth                 ),
@@ -1066,7 +1066,7 @@ module snax_shell #(
       .addr_t           ( logic [AddrWidth-1:0] ),
       .rule_t           ( reqrsp_rule_t         )
     ) i_snax_dma_sel_aw (
-      .addr_i           ( axi_dma_req_o.aw.addr ),  
+      .addr_i           ( axi_dma_req.aw.addr   ),  
       .addr_map_i       ( dma_addr_map          ),
       .idx_o            ( aw_dma_select         ),
       .dec_valid_o      (                       ),
@@ -1086,7 +1086,7 @@ module snax_shell #(
       .addr_t           ( logic [AddrWidth-1:0] ),
       .rule_t           ( reqrsp_rule_t         )
     ) i_snax_dma_sel_ar (
-      .addr_i           ( axi_dma_req_o.ar.addr ),
+      .addr_i           ( axi_dma_req.ar.addr   ),
       .addr_map_i       ( dma_addr_map          ),
       .idx_o            ( ar_dma_select         ),
       .dec_valid_o      (                       ),

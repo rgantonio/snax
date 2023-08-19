@@ -4,6 +4,11 @@
 # SPDX-License-Identifier: SHL-0.51
 # Author: Ryan Antonio (ryan.antonio@kuleuven.be)
 # ---------------------------------------------
+nop
+nop
+nop
+nop
+nop
 addi x1, x0, 0   #src addr
 addi x2, x0, 512 #dst addr
 addi x2, x2, 512 #dst addr
