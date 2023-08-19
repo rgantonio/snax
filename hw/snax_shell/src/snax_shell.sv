@@ -93,6 +93,7 @@ module snax_shell #(
   parameter bit          SNAX                   = 0,          // Has SNAX support
   parameter int unsigned LocalMemSize           = 1024,       // Local memory parameter to indicate size
   parameter int unsigned LocalMemAddrWidth      = $clog2(LocalMemSize), // Local memory parameter, address width is dependent on LocalMemSize
+  parameter int unsigned LocalMemDataWidth      = 32,
   parameter int unsigned NumIntOutstandingLoads = 0,
   parameter int unsigned NumIntOutstandingMem   = 0,
   parameter int unsigned NumFPOutstandingLoads  = 0,
@@ -977,48 +978,14 @@ module snax_shell #(
   end
 
   //-------------------------------
-  // Generate SNAX controller
+  // Generate SNAX memory subsystem
   //-------------------------------
-  if (SNAX) begin: gen_hwpe_acc
-
-  /*
-  snax_mac # (
-    .DataWidth          ( DataWidth         ),
-    .SnaxLocalMemPorts  ( SnaxLocalMemPorts ),
-    .acc_req_t          ( acc_req_t         ),
-    .acc_resp_t         ( acc_resp_t        )
-    .tcdm_req_t         ( tcdm_req_t        ),
-    .tcdm_rsp_t         ( tcdm_rsp_t        )
-  )(
-    .clk_i              ( clk_i             ),
-    .rst_ni             ( rst_ni            ),
-    .snax_qvalid_i      ( snax_qvalid_i     ),
-    .snax_qready_o      ( snax_qready_o     ),
-    .snax_req_i         ( snax_req_i        ),
-    .snax_resp_o        ( snax_resp_o       ),
-    .snax_pvalid_o      ( snax_pvalid_o     ),
-    .snax_pready_i      ( snax_pready_i     ),
-    .snax_tcdm_req_o    ( snax_tcdm_req_o   ),
-    .snax_tcdm_rsp_i    ( snax_tcdm_rsp_i   )
-  );
-  */
-
-    // HWPE control interface
-    hwpe_ctrl_intf_periph #(
-        .ID_WIDTH ( 5 )
-    ) snax_periph (
-        .clk ( clk_i )
-    );
-
-    hwpe_stream_intf_tcdm snax_tcdm [SnaxLocalMemPorts-1:0] (
-        .clk ( clk_i )
-    );
-
+  if (SNAX) begin: gen_snax_acc
 
     // For the local memory definitions
+    // Declare these only when we need the SNAX
     localparam int unsigned DMAStrbWidth = DMADataWidth/8;
 
-    typedef logic                  [31:0] hwpe_mem_addr_t;
     typedef logic [LocalMemAddrWidth-1:0] mem_addr_t;
     typedef logic                  [31:0] mem_data_t;
     typedef logic                  [ 3:0] mem_strb_t;
@@ -1027,110 +994,7 @@ module snax_shell #(
     typedef logic      [DMADataWidth-1:0] dma_data_t;
     typedef logic      [DMAStrbWidth-1:0] dma_strb_t;
 
-    typedef struct packed {
-      logic           [SnaxLocalMemPorts-1:0]  req;
-      logic           [SnaxLocalMemPorts-1:0]  gnt;
-      hwpe_mem_addr_t [SnaxLocalMemPorts-1:0]  add;
-      logic           [SnaxLocalMemPorts-1:0]  wen;
-      mem_strb_t      [SnaxLocalMemPorts-1:0]  be;
-      mem_data_t      [SnaxLocalMemPorts-1:0]  data;
-      mem_data_t      [SnaxLocalMemPorts-1:0]  r_data;
-      logic           [SnaxLocalMemPorts-1:0]  r_valid;
-      logic                                    r_opc;
-      logic                                    r_user;
-    } loc_mem_t;
-
-    loc_mem_t snax_mem;
-
-    // SNAX HWPE controller
-    snax_hwpe_ctrl #(
-      .DataWidth    ( DataWidth          ), // Default data width
-      .acc_req_t    ( acc_req_t          ), // Memory request payload type, usually write enable, write data, etc.
-      .acc_rsp_t    ( acc_resp_t         )  // Memory response payload type, usually read data
-    ) i_snax_hwpe_ctrl (
-      .clk_i        ( clk_i              ), // Clock
-      .rst_ni       ( rst_ni             ), // Asynchronous reset, active low
-      .req_i        ( acc_snitch_demux_q ), // Request stream interface, payload
-      .req_valid_i  ( snax_qvalid        ), // Request stream interface, payload is valid for transfer
-      .req_ready_o  ( snax_qready        ), // Request stream interface, payload can be accepted
-      .resp_o       ( snax_resp          ), // Response stream interface, payload
-      .resp_valid_o ( snax_pvalid        ), // Response stream interface, payload is valid for transfer
-      .resp_ready_i ( snax_pready        ), // Response stream interface, payload can be accepted
-      .periph       ( snax_periph        )  // periph master port
-    );
-
-
-    //-------------------------------
-    // Main MAC generation
-    //-------------------------------
-    if (SNAX) begin: gen_hwpe_mac
-
-      import mac_package::*;
-
-      // Main MAC engine
-      mac_top_wrap #(
-          .N_CORES      ( 1                ),
-          .MP           ( SnaxLocalMemPorts  ),
-          .ID           ( 5                )
-      ) i_mac_top (
-        .clk_i          ( clk_i               ),
-        .rst_ni         ( rst_ni              ),
-        .test_mode_i    ( 1'b0                ),
-        .evt_o          (                     ),      // Unused
-        .tcdm_req       ( snax_mem.req        ),
-        .tcdm_gnt       ( snax_mem.gnt        ),      // input
-        .tcdm_add       ( snax_mem.add        ),
-        .tcdm_wen       ( snax_mem.wen        ),
-        .tcdm_be        ( snax_mem.be         ),
-        .tcdm_data      ( snax_mem.data       ),
-        .tcdm_r_data    ( snax_mem.r_data     ),      // input
-        .tcdm_r_valid   ( snax_mem.r_valid    ),      // input
-        .periph_req     ( snax_periph.req     ),
-        .periph_gnt     ( snax_periph.gnt     ),
-        .periph_add     ( snax_periph.add     ),
-        .periph_wen     ( snax_periph.wen     ),
-        .periph_be      ( snax_periph.be      ),
-        .periph_data    ( snax_periph.data    ),
-        .periph_id      ( snax_periph.id      ),
-        .periph_r_data  ( snax_periph.r_data  ),
-        .periph_r_valid ( snax_periph.r_valid ),
-        .periph_r_id    ( snax_periph.r_id    )
-      );
-
-    end
-
-
-    tcdm_req_t [SnaxLocalMemPorts-1:0] snax_tcdm_req;
-    tcdm_rsp_t [SnaxLocalMemPorts-1:0] snax_tcdm_rsp;
-
-    // Manual remapping
-    for (i = 0; i < SnaxLocalMemPorts; i++) begin: gen_map_translate
-
-      assign snax_tcdm       [i].req  = snax_mem.req [i];
-      assign snax_mem.gnt    [i]      = snax_tcdm    [i].gnt;
-      assign snax_tcdm       [i].add  = snax_mem.add [i];
-      assign snax_tcdm       [i].wen  = snax_mem.wen [i];
-      assign snax_tcdm       [i].be   = snax_mem.be  [i];
-      assign snax_tcdm       [i].data = snax_mem.data[i];
-      assign snax_mem.r_data [i]      = snax_tcdm    [i].r_data;
-      assign snax_mem.r_valid[i]      = snax_tcdm    [i].r_valid;
-
-      snax_hwpe_to_reqrsp #(
-        .DataWidth        ( DataWidth         ),  // Data width to use
-        .tcdm_req_t       ( tcdm_req_t        ),  // TCDM request type
-        .tcdm_rsp_t       ( tcdm_rsp_t        )   // TCDM response type
-      ) i_snax_hwpe_to_reqrsp (
-        .clk_i            ( clk_i             ),  // Clock
-        .rst_ni           ( rst_ni            ),  // Asynchronous reset, active low
-        .tcdm_req_o       ( snax_tcdm_req[i]  ),  // TCDM valid ready format
-        .tcdm_rsp_i       ( snax_tcdm_rsp[i]  ),  // TCDM valid ready format
-        .hwpe_tcdm_slave  ( snax_tcdm[i]      )   // HWPE TCDM slave port
-      );
-    end
-
-    // TODO: Fix and clean me later
-    localparam int unsigned LocalMemWidth = 32;
-    localparam int unsigned LocalMemBanks = DMADataWidth/LocalMemWidth; // Parameter that maximizes DMA bandwidth
+    localparam int unsigned LocalMemBanks = DMADataWidth/LocalMemDataWidth; // Parameter that maximizes DMA bandwidth
 
     `MEM_TYPEDEF_ALL(mem, mem_addr_t, mem_data_t, mem_strb_t, tcdm_user_t)
     `MEM_TYPEDEF_ALL(mem_dma, dma_addr_t, dma_data_t, dma_strb_t, logic)
@@ -1141,28 +1005,45 @@ module snax_shell #(
     mem_req_t [LocalMemBanks-1:0] local_mem_req;
     mem_rsp_t [LocalMemBanks-1:0] local_mem_rsp;
 
+    // Simple rewiring for SNAX signals
+    assign snax_req_o    = acc_snitch_demux;
+    assign snax_qvalid_o = snax_qvalid;
+    assign snax_qready   = snax_qready_i;
+
+    assign snax_resp     = snax_resp_i;
+    assign snax_pvalid   = snax_pvalid_i;
+    assign snax_pready_o = snax_pready;
+
+    //---------------------------------------
+    // Convert snax_tcdm_reqrsp signals into local reqrsp signals
+    // Get input from the accelerator engine
+    // Output goes into the i_snax_mem_wide_narrow_mux
+    // Which MUXes between narrow and wide (DMA) memory requests
+    //---------------------------------------
+
     snitch_tcdm_interconnect #(
-      .NumInp                ( SnaxLocalMemPorts      ),
+      .NumInp                ( SnaxLocalMemPorts    ),
       .NumOut                ( LocalMemBanks        ),
       .tcdm_req_t            ( tcdm_req_t           ),
       .tcdm_rsp_t            ( tcdm_rsp_t           ),
       .mem_req_t             ( mem_req_t            ),
       .mem_rsp_t             ( mem_rsp_t            ),
       .MemAddrWidth          ( 6                    ), //TODO: Make me flexible later and note that this has something to do with the tcdm_reqrsp_t dependency. 
-      .DataWidth             ( LocalMemWidth        ),
+      .DataWidth             ( LocalMemDataWidth    ),
       .user_t                ( tcdm_user_t          ),
       .MemoryResponseLatency ( 1                    )  
     ) i_snax_tcdm_interconnect (
       .clk_i                 ( clk_i                ),
       .rst_ni                ( rst_ni               ),
-      .req_i                 ( snax_tcdm_req        ),
-      .rsp_o                 ( snax_tcdm_rsp        ),
+      .req_i                 ( snax_tcdm_req_i      ),
+      .rsp_o                 ( snax_tcdm_rsp_o      ),
       .mem_req_o             ( local_mem_narrow_req ),
       .mem_rsp_i             ( local_mem_narrow_rsp )
     );
 
     //---------------------------------------
     // Multiplexing for DMA
+    // Changing between global and local memory requests
     //---------------------------------------
 
     // This one is for address mapping things
@@ -1171,17 +1052,21 @@ module snax_shell #(
     assign dma_addr_map = '{
       idx : 1,
       base: localmem_addr_base_i,
-      mask: ({AddrWidth{1'b1}} << TCDMAddrWidth) // TODO, change me later with local mem address width
+      mask: ({AddrWidth{1'b1}} << LocalMemAddrWidth) // TODO, change me later with local mem address width
     };
 
-
+    //---------------------------------------
+    // Control signal aw_dma_select
+    // Dependent on AW address
+    // If beyond localmem_addr_base_i, then we access global memory
+    //---------------------------------------
     addr_decode_napot #(
       .NoIndices        ( 2                     ),
       .NoRules          ( 1                     ),
       .addr_t           ( logic [AddrWidth-1:0] ),
       .rule_t           ( reqrsp_rule_t         )
     ) i_snax_dma_sel_aw (
-      .addr_i           ( axi_dma_req_o.aw.addr ),  // Change what needs to be accessed
+      .addr_i           ( axi_dma_req_o.aw.addr ),  
       .addr_map_i       ( dma_addr_map          ),
       .idx_o            ( aw_dma_select         ),
       .dec_valid_o      (                       ),
@@ -1190,13 +1075,18 @@ module snax_shell #(
       .default_idx_i    ( '0                    )
     );
 
+    //---------------------------------------
+    // Control signal ar_dma_select
+    // Dependent on AR address
+    // If beyond localmem_addr_base_i, then we access global memory
+    //---------------------------------------
     addr_decode_napot #(
       .NoIndices        ( 2                     ),
       .NoRules          ( 1                     ),
       .addr_t           ( logic [AddrWidth-1:0] ),
       .rule_t           ( reqrsp_rule_t         )
     ) i_snax_dma_sel_ar (
-      .addr_i           ( axi_dma_req_o.ar.addr ),  // Change what needs to be accessed
+      .addr_i           ( axi_dma_req_o.ar.addr ),
       .addr_map_i       ( dma_addr_map          ),
       .idx_o            ( ar_dma_select         ),
       .dec_valid_o      (                       ),
@@ -1205,6 +1095,12 @@ module snax_shell #(
       .default_idx_i    ( '0                    )
     );
 
+    //---------------------------------------
+    // De-muxing whether the signal from the Snitch DMA
+    // goes to local memory or the global memory ports
+    // Note that axi_dma_req_muxout[1] goes to global memory
+    // and axi_dma_req_muxout[0] goes to local memory
+    //---------------------------------------
     axi_demux #(
       .AxiIdWidth      ( DMAIdWidth         ),  // ID Width
       .AxiLookBits     ( DMAIdWidth         ),
@@ -1228,18 +1124,21 @@ module snax_shell #(
       .mst_resps_i     ( axi_dma_res_muxout )
     );
 
+    // Global memory signal
     assign axi_dma_req_o         = axi_dma_req_muxout[1];
     assign axi_dma_res_muxout[1] = axi_dma_res_i;
 
     // Need to translate the axi_dma_req_muxout[0] to memrequest responses
     typedef logic [    47:0] tcdm_addr_t; //Watch out for me
-    `TCDM_TYPEDEF_ALL(tcdm_dma, tcdm_addr_t, data_dma_t, strb_dma_t, logic)
 
-    tcdm_dma_req_t locmem_dma_req;
-    tcdm_dma_rsp_t locmem_dma_rsp;
+    `TCDM_TYPEDEF_ALL(snax_tcdm_dma, tcdm_addr_t, data_dma_t, strb_dma_t, logic)
+
+    snax_tcdm_dma_req_t locmem_dma_req;
+    snax_tcdm_dma_rsp_t locmem_dma_rsp;
 
     addr_t locmem_dma_req_q_addr_nontrunc;
 
+    // Convert AXI signals into reqrsp that goes into local memory later
     axi_to_mem_interleaved #(
         .axi_req_t    ( axi_slv_req_t                  ),
         .axi_resp_t   ( axi_slv_resp_t                 ),
@@ -1272,31 +1171,36 @@ module snax_shell #(
     mem_dma_req_t local_mem_wide_req;
     mem_dma_rsp_t local_mem_wide_rsp;
 
+    //---------------------------------------
+    // From the local req rsp in DMA, we use a TCDM interconnect
+    // To parallelize the accesses to local memory
+    //---------------------------------------
     snitch_tcdm_interconnect #(
-        .NumInp                 ( 1                  ),
-        .NumOut                 ( 1                  ),
-        .tcdm_req_t             ( tcdm_dma_req_t     ),
-        .tcdm_rsp_t             ( tcdm_dma_rsp_t     ),
-        .mem_req_t              ( mem_dma_req_t      ),
-        .mem_rsp_t              ( mem_dma_rsp_t      ),
-        .user_t                 ( logic              ),
-        .MemAddrWidth           ( 10                 ),
-        .DataWidth              ( DMADataWidth       ),
-        .MemoryResponseLatency  ( 1                  )
+        .NumInp                 ( 1                   ),
+        .NumOut                 ( 1                   ),
+        .tcdm_req_t             ( snax_tcdm_dma_req_t ),
+        .tcdm_rsp_t             ( snax_tcdm_dma_rsp_t ),
+        .mem_req_t              ( mem_dma_req_t       ),
+        .mem_rsp_t              ( mem_dma_rsp_t       ),
+        .user_t                 ( logic               ),
+        .MemAddrWidth           ( 10                  ),
+        .DataWidth              ( DMADataWidth        ),
+        .MemoryResponseLatency  ( 1                   )
     ) i_snax_dma_interconnect (
-        .clk_i                  ( clk_i              ),
-        .rst_ni                 ( rst_ni             ),
-        .req_i                  ( locmem_dma_req     ),
-        .rsp_o                  ( locmem_dma_rsp     ),
-        .mem_req_o              ( local_mem_wide_req ),
-        .mem_rsp_i              ( local_mem_wide_rsp )
+        .clk_i                  ( clk_i               ),
+        .rst_ni                 ( rst_ni              ),
+        .req_i                  ( locmem_dma_req      ),
+        .rsp_o                  ( locmem_dma_rsp      ),
+        .mem_req_o              ( local_mem_wide_req  ),
+        .mem_rsp_i              ( local_mem_wide_rsp  )
     );
 
     //---------------------------------------
-    // Accessing actual memory
+    // MUX that selects between the narrow stream requests
+    // or the wide DMA requests
     //---------------------------------------
     mem_wide_narrow_mux #(
-      .NarrowDataWidth  ( 32                         ), // TODO: Fix me later
+      .NarrowDataWidth  ( 32                         ),
       .WideDataWidth    ( DMADataWidth               ),
       .mem_narrow_req_t ( mem_req_t                  ),
       .mem_narrow_rsp_t ( mem_rsp_t                  ),
@@ -1308,40 +1212,45 @@ module snax_shell #(
       .in_narrow_req_i  ( local_mem_narrow_req       ),
       .in_narrow_rsp_o  ( local_mem_narrow_rsp       ),
       .in_wide_req_i    ( local_mem_wide_req         ),
-      .in_wide_rsp_o    ( local_mem_wide_rsp         ), // TODO: Add me later
+      .in_wide_rsp_o    ( local_mem_wide_rsp         ), 
       .out_req_o        ( local_mem_req              ),
       .out_rsp_i        ( local_mem_rsp              ),
-      .sel_wide_i       ( local_mem_wide_req.q_valid )  // TODO: Add me later
+      .sel_wide_i       ( local_mem_wide_req.q_valid ) 
     );
     
-    
+    //---------------------------------------
+    // Local memory
+    //---------------------------------------
     snax_local_mem_mux #(
-      .LocalMemAddrWidth  ( LocalMemAddrWidth ),
-      .NarrowDataWidth    ( 32                ),
-      .WideDataWidth      ( DMADataWidth      ),
-      .LocalMemSize       ( LocalMemSize      ),
-      .NumBanks           ( 16                ), // Need to maximize banks depending on WideDataWidth
-      .SimInit            ( "random"          ),
-      .addr_t             ( mem_addr_t        ),
-      .data_t             ( mem_data_t        ),
-      .strb_t             ( mem_strb_t        ),
-      .mem_req_t          ( mem_req_t         ), // Memory request payload type, usually write enable, write data, etc.
-      .mem_rsp_t          ( mem_rsp_t         )  // Memory response payload type, usually read data
+      .LocalMemAddrWidth  ( LocalMemAddrWidth           ),
+      .NarrowDataWidth    ( 32                          ),
+      .WideDataWidth      ( DMADataWidth                ),
+      .LocalMemSize       ( LocalMemSize                ),
+      .NumBanks           ( LocalMemBanks               ), // Need to maximize banks depending on WideDataWidth
+      .SimInit            ( "random"                    ),
+      .addr_t             ( mem_addr_t                  ),
+      .data_t             ( mem_data_t                  ),
+      .strb_t             ( mem_strb_t                  ),
+      .mem_req_t          ( mem_req_t                   ), // Memory request payload type, usually write enable, write data, etc.
+      .mem_rsp_t          ( mem_rsp_t                   )  // Memory response payload type, usually read data
     ) i_snax_local_mem_mux (
-      .clk_i              ( clk_i             ), // Clock
-      .rst_ni             ( rst_ni            ), // Asynchronous reset, active low
-      .dma_access_i       ( local_mem_wide_req.q_valid                ),
-      .mem_req_i          ( local_mem_req     ), // Memory valid-ready format
-      .mem_rsp_o          ( local_mem_rsp     )  // Memory valid-ready format local_mem_narrow_rsp
+      .clk_i              ( clk_i                       ), // Clock
+      .rst_ni             ( rst_ni                      ), // Asynchronous reset, active low
+      .dma_access_i       ( local_mem_wide_req.q_valid  ),
+      .mem_req_i          ( local_mem_req               ), // Memory valid-ready format
+      .mem_rsp_o          ( local_mem_rsp               )  // Memory valid-ready format local_mem_narrow_rsp
     );
     
-  
 
   end else begin: gen_no_snax
 
     assign snax_qready = '0;
     assign snax_resp   = '0;
     assign snax_pvalid = '0;
+
+    assign snax_req_o    = acc_snitch_demux;
+    assign snax_qvalid_o = snax_qvalid;
+    assign snax_pready_o = snax_pready;
 
   end
 

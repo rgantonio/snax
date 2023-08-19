@@ -1088,6 +1088,8 @@ module snax_snitch import snax_snitch_pkg::*; import snax_riscv_instr::*; #(
         acc_qvalid_o    = valid_instr;
         opa_select      = Reg;
         opb_select      = Reg;
+        //opa_select = Reg;
+        //opb_select = IImmediate;
         acc_qreq_o.addr = SNAX_CSR;
       end
 
