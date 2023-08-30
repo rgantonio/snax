@@ -100,27 +100,31 @@ module snax_hwpe_ctrl #(
 
   // wen = 1'b1 whenever we read. wen = 1'b0 whenever we write
   // decode this based on the instruction given
-  // assign wen = (req_i.data_op == SNAX_RD_ACC) ? 1'b1 : 1'b0; // This was for original HWPE controller
-  // This below considers the CSRs
-  assign wen = (req_i.data_op == SNAX_RD_ACC ||
-                req_i.data_op == CSRRS       || req_i.data_op == CSRRSI ||
-                req_i.data_op == CSRRC       || req_i.data_op == CSRRCI    ) ? 1'b1 : 1'b0;
+  // Need to use unique casez to ignore `?` bits
+  always_comb begin
+    unique casez (req_i.data_op)
+      SNAX_RD_ACC, CSRRS, CSRRSI, CSRRC, CSRRCI: begin
+        wen = 1'b1;
+      end
+      default: begin
+        wen = 1'b0;
+      end
+    endcase
+  end
 
   // Adding switcher to handle both instruction extension and CSR
   logic [31:0] address_in;
 
   always_comb begin
-    if( req_i.data_op == CSRRW || req_i.data_op == CSRRWI ||
-        req_i.data_op == CSRRS || req_i.data_op == CSRRSI ||
-        req_i.data_op == CSRRC || req_i.data_op == CSRRCI ) begin
-
-      //Offset due to start of address CSR and << 2 due to "byte" addressable of registers
-      address_in = (req_i.data_arga[31:0] - 32'h3c0) << 2; 
-
-    end else begin
-      address_in = req_i.data_arga[31:0];
-    end
-
+    unique casez (req_i.data_op)
+      CSRRW, CSRRWI, CSRRS, CSRRSI, CSRRC, CSRRCI: begin
+        //Offset due to start of address CSR and << 2 due to "byte" addressable of registers
+        address_in = (req_i.data_arga[31:0] - 32'd960) << 2; 
+      end
+      default: begin
+        address_in = req_i.data_arga[31:0];
+      end
+    endcase
   end
 
   // Byte enable always only when we need to write

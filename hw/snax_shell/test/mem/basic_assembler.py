@@ -146,8 +146,33 @@ def decode(entry):
         op = '0011000'
         machine_inst = f7+rs2+rs1+f3+rd+op
         hex_code = hex_fix(machine_inst)
+    elif (entry[0] == 'csrrw'):
+        imm = ext_type(entry[2].strip(','), 'imm')
+        rs1 = ext_type(int(entry[3].strip('x').strip(',')), 'reg')
+        f3 = '001'
+        rd = ext_type(int(entry[1].strip('x').strip(',')), 'reg')
+        op = '1110011'
+        machine_inst = imm+rs1+f3+rd+op
+        hex_code = hex_fix(machine_inst)
+    elif (entry[0] == 'csrrs'):
+        imm = ext_type(entry[2].strip(','), 'imm')
+        rs1 = ext_type(int(entry[3].strip('x').strip(',')), 'reg')
+        f3 = '010'
+        rd = ext_type(int(entry[1].strip('x').strip(',')), 'reg')
+        op = '1110011'
+        machine_inst = imm+rs1+f3+rd+op
+        hex_code = hex_fix(machine_inst)
+    elif (entry[0] == 'csrrc'):
+        imm = ext_type(entry[2].strip(','), 'imm')
+        rs1 = ext_type(int(entry[3].strip('x').strip(',')), 'reg')
+        f3 = '011'
+        rd = ext_type(int(entry[1].strip('x').strip(',')), 'reg')
+        op = '1110011'
+        machine_inst = imm+rs1+f3+rd+op
+        hex_code = hex_fix(machine_inst)
     elif (entry[0] == '#'):
         pass
+    
     else:
         # This is nop
         hex_code = '00000013'
