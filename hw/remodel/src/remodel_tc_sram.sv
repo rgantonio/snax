@@ -198,7 +198,7 @@ module remodel_tc_sram #(
   // In case simulation initialization is disabled (SimInit == 'none'), don't assign to the sram
   // content at all. This improves simulation performance in tools like verilator
 
-  if (SimInit == "none") begin: gen_initial_values
+  if (SimInit == "none") begin: gen_none_values
 
     // write memory array without initialization
 
@@ -242,7 +242,7 @@ module remodel_tc_sram #(
 
     end
 
-  end else begin
+  end else begin: gen_yes_values
 
     // write memory array
     always_ff @(posedge clk_i or negedge rst_ni) begin
@@ -352,14 +352,14 @@ remodel_tc_sram #(
   .ReadMemFile  ( ReadMemFile ),
   .PrintSimCfg  ( PrintSimCfg ),
   .ImplKey      ( ImplKey     ),
-  .impl_in_t    ( impl_in_t   ),  
+  .impl_in_t    ( impl_in_t   ),
   .impl_out_t   ( impl_out_t  ),
   .ImplOutSim   ( ImplOutSim  )
 ) i_remodel_tc_sram (
   .clk_i        ( clk_i       ),
   .rst_ni       ( rst_ni      ),
   .impl_i       ( impl_i      ),
-  .impl_o       ( impl_o      ), 
+  .impl_o       ( impl_o      ),
   .req_i        ( req_i       ),
   .we_i         ( we_i        ),
   .addr_i       ( addr_i      ),
