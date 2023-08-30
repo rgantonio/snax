@@ -172,7 +172,6 @@ def decode(entry):
         hex_code = hex_fix(machine_inst)
     elif (entry[0] == '#'):
         pass
-    
     else:
         # This is nop
         hex_code = '00000013'
