@@ -1043,6 +1043,10 @@ package snax_riscv_instr;
   localparam logic [11:0] CSR_PMPADDR13       = 12'h3bd;
   localparam logic [11:0] CSR_PMPADDR14       = 12'h3be;
   localparam logic [11:0] CSR_PMPADDR15       = 12'h3bf;
+  // BEGIN: Reserved addresses for SNAX ports
+  localparam logic [11:0] CSR_SNAX_BEGIN      = 12'h3c0;
+  localparam logic [11:0] CSR_SNAX_END        = 12'h5ff;
+  // END: Reserved addresses for SNAX ports
   localparam logic [11:0] CSR_HSTATUS         = 12'h600;
   localparam logic [11:0] CSR_HEDELEG         = 12'h602;
   localparam logic [11:0] CSR_HIDELEG         = 12'h603;
