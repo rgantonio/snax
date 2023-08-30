@@ -146,12 +146,13 @@ module snax_snitch import snax_snitch_pkg::*; import snax_riscv_instr::*; #(
   logic [31:0] consec_pc;
 
   // Immediates decoding
-  logic [31:0] iimm, uimm, jimm, bimm, simm;
+  logic [31:0] iimm, uimm, jimm, bimm, simm, csrimm;
 
   /* verilator lint_off WIDTH */
-  assign iimm = $signed({inst_data_i[31:20]});
-  assign uimm = {inst_data_i[31:12], 12'b0};
-  assign jimm = $signed({inst_data_i[31],
+  assign iimm   = $signed({inst_data_i[31:20]});
+  assign csrimm = {inst_data_i[31:20]};
+  assign uimm   = {inst_data_i[31:12], 12'b0};
+  assign jimm   = $signed({inst_data_i[31],
                                   inst_data_i[19:12], inst_data_i[20], inst_data_i[30:21], 1'b0});
   assign bimm = $signed({inst_data_i[31],
                                     inst_data_i[7], inst_data_i[30:25], inst_data_i[11:8], 1'b0});
@@ -237,7 +238,7 @@ module snax_snitch import snax_snitch_pkg::*; import snax_riscv_instr::*; #(
   alu_op_e alu_op;
 
   typedef enum logic [3:0] {
-    None, Reg, IImmediate, UImmediate, JImmediate, SImmediate, SFImmediate, PC, CSR, CSRImmmediate
+    None, Reg, IImmediate, UImmediate, JImmediate, SImmediate, SFImmediate, PC, CSR, CSRImmmediate, CSRAddrImmediate, CSRrs1
   } op_select_e;
   op_select_e opa_select, opb_select;
 
@@ -857,69 +858,126 @@ module snax_snitch import snax_snitch_pkg::*; import snax_riscv_instr::*; #(
       //   acc_qreq_o.addr = SNAX_CSR;
       // end
 
+      // We can re-use opa_select, opb_select, and rd_select
+      // but for CSR, depending on the Uimmediate field, we need to MUX
+      // signals that go into the accelerator isntead
+      // We need to mux the use of ACC ports
+      // Checkout the CSRRSI and CSRRCI version
 
       CSRRW: begin // Atomic Read/Write CSR
-        opa_select = Reg;
-        opb_select = None;
-        rd_select = RdBypass;
-        // We can re-use opa_select, opb_select, and rd_select
-        // but for CSR, depending on the Uimmediate field, we need to MUX
-        // signals that go into the accelerator isntead
-        // We need to mux the use of ACC ports
-        // Checkout the CSRRSI and CSRRCI version
-        rd_bypass = csr_rvalue;
-        csr_en = valid_instr;
+        if((csrimm >= CSR_SNAX_BEGIN) && ((csrimm <= CSR_SNAX_END))) begin
+          acc_qvalid_o    = valid_instr;
+          opa_select      = CSRAddrImmediate;
+          opb_select      = CSRrs1;
+          acc_qreq_o.addr = SNAX_CSR;
+        end else begin
+          opa_select      = Reg;
+          opb_select      = None;
+          rd_select       = RdBypass;
+          rd_bypass       = csr_rvalue;
+          csr_en          = valid_instr;
+        end
       end
+
       CSRRWI: begin
-        opa_select = CSRImmmediate;
-        opb_select = None;
-        rd_select = RdBypass;
-        rd_bypass = csr_rvalue;
-        csr_en = valid_instr;
+        if((csrimm >= CSR_SNAX_BEGIN) && ((csrimm <= CSR_SNAX_END))) begin
+          acc_qvalid_o    = valid_instr;
+          opa_select      = CSRAddrImmediate;
+          opb_select      = CSRImmmediate;
+          acc_qreq_o.addr = SNAX_CSR;
+        end else begin
+          opa_select      = CSRImmmediate;
+          opb_select      = None;
+          rd_select       = RdBypass;
+          rd_bypass       = csr_rvalue;
+          csr_en          = valid_instr;
+        end
       end
+
       CSRRS: begin  // Atomic Read and Set Bits in CSR
-          alu_op = LOr;
-          opa_select = Reg;
-          opb_select = CSR;
-          rd_select = RdBypass;
-          rd_bypass = csr_rvalue;
-          csr_en = valid_instr;
+        if((csrimm >= CSR_SNAX_BEGIN) && ((csrimm <= CSR_SNAX_END))) begin
+          write_rd        = 1'b0;
+          uses_rd         = 1'b1;
+          acc_qvalid_o    = valid_instr;
+          opa_select      = CSRAddrImmediate;
+          opb_select      = None; // Just reading so nothing to write
+          acc_register_rd = 1'b1;
+          acc_qreq_o.addr = SNAX_CSR;
+        end else begin
+          alu_op          = LOr;
+          opa_select      = Reg;
+          opb_select      = CSR;
+          rd_select       = RdBypass;
+          rd_bypass       = csr_rvalue;
+          csr_en          = valid_instr;
+        end
       end
+
       CSRRSI: begin
-        // offload CSR enable to FP SS
-        if (inst_data_i[31:20] != CSR_SSR) begin
-          alu_op = LOr;
-          opa_select = CSRImmmediate;
-          opb_select = CSR;
-          rd_select = RdBypass;
-          rd_bypass = csr_rvalue;
-          csr_en = valid_instr;
+        
+        if((csrimm >= CSR_SNAX_BEGIN) && ((csrimm <= CSR_SNAX_END))) begin
+          write_rd        = 1'b0;
+          uses_rd         = 1'b1;
+          acc_qvalid_o    = valid_instr;
+          opa_select      = CSRAddrImmediate;
+          opb_select      = None; // Just reading so nothing to write
+          acc_register_rd = 1'b1;
+          acc_qreq_o.addr = SNAX_CSR;
+
+        end else if (inst_data_i[31:20] != CSR_SSR) begin // offload CSR enable to FP SS
+          alu_op          = LOr;
+          opa_select      = CSRImmmediate;
+          opb_select      = CSR;
+          rd_select       = RdBypass;
+          rd_bypass       = csr_rvalue;
+          csr_en          = valid_instr;
         end else begin
           write_rd = 1'b0;
-          acc_qvalid_o = valid_instr;
+          acc_qvalid_o    = valid_instr;
         end
       end
+
       CSRRC: begin // Atomic Read and Clear Bits in CSR
-        alu_op = LNAnd;
-        opa_select = Reg;
-        opb_select = CSR;
-        rd_select = RdBypass;
-        rd_bypass = csr_rvalue;
-        csr_en = valid_instr;
-      end
-      CSRRCI: begin
-        if (inst_data_i[31:20] != CSR_SSR) begin
-          alu_op = LNAnd;
-          opa_select = CSRImmmediate;
-          opb_select = CSR;
-          rd_select = RdBypass;
-          rd_bypass = csr_rvalue;
-          csr_en = valid_instr;
+        if((csrimm >= CSR_SNAX_BEGIN) && ((csrimm <= CSR_SNAX_END))) begin
+          write_rd        = 1'b0;
+          uses_rd         = 1'b1;
+          acc_qvalid_o    = valid_instr;
+          opa_select      = CSRAddrImmediate;
+          opb_select      = None; // Just reading so nothing to write
+          acc_register_rd = 1'b1;
+          acc_qreq_o.addr = SNAX_CSR;
         end else begin
-          write_rd = 1'b0;
-          acc_qvalid_o = valid_instr;
+          alu_op          = LNAnd;
+          opa_select      = Reg;
+          opb_select      = CSR;
+          rd_select       = RdBypass;
+          rd_bypass       = csr_rvalue;
+          csr_en          = valid_instr;
         end
       end
+
+      CSRRCI: begin
+        if((csrimm >= CSR_SNAX_BEGIN) && ((csrimm <= CSR_SNAX_END))) begin
+          write_rd        = 1'b0;
+          uses_rd         = 1'b1;
+          acc_qvalid_o    = valid_instr;
+          opa_select      = CSRAddrImmediate;
+          opb_select      = None; // Just reading so nothing to write
+          acc_register_rd = 1'b1;
+          acc_qreq_o.addr = SNAX_CSR;
+        end else if (inst_data_i[31:20] != CSR_SSR) begin
+          alu_op          = LNAnd;
+          opa_select      = CSRImmmediate;
+          opb_select      = CSR;
+          rd_select       = RdBypass;
+          rd_bypass       = csr_rvalue;
+          csr_en          = valid_instr;
+        end else begin
+          write_rd        = 1'b0;
+          acc_qvalid_o    = valid_instr;
+        end
+      end
+
       //---------------------------------------------
       // End of CSR instructions
       //---------------------------------------------
@@ -2817,12 +2875,13 @@ module snax_snitch import snax_snitch_pkg::*; import snax_riscv_instr::*; #(
   always_comb begin
 
     unique case (opa_select)
-      None:          opa = '0;
-      Reg:           opa = gpr_rdata[0];
-      UImmediate:    opa = uimm;
-      JImmediate:    opa = jimm;
-      CSRImmmediate: opa = {{{32-RegWidth}{1'b0}}, rs1};
-      default:       opa = '0;
+      None:             opa = '0;
+      Reg:              opa = gpr_rdata[0];
+      UImmediate:       opa = uimm;
+      JImmediate:       opa = jimm;
+      CSRImmmediate:    opa = {{{32-RegWidth}{1'b0}}, rs1};
+      CSRAddrImmediate: opa = csrimm; // Use opa to use the immediate field for CSR SNAX addressing
+      default:          opa = '0;
     endcase
 
   end
@@ -2835,6 +2894,8 @@ module snax_snitch import snax_snitch_pkg::*; import snax_riscv_instr::*; #(
       IImmediate:              opb = iimm;
       SFImmediate, SImmediate: opb = simm;
       PC:                      opb = pc_q;
+      CSRrs1:                  opb = gpr_rdata[0];  // Use opb to read from rs1 for CSR SNAX instructions
+      CSRImmmediate:           opb = {{{32-RegWidth}{1'b0}}, rs1};
       CSR:                     opb = csr_rvalue;
       default:                 opb = '0;
     endcase

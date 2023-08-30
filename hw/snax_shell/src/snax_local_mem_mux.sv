@@ -15,6 +15,7 @@
 
 // verilog_lint: waive-start line-length
 // verilog_lint: waive-start no-trailing-spaces
+// verilog_lint: waive-start explicit-parameter-storage-type
 
 module snax_local_mem_mux #(
 
@@ -130,6 +131,7 @@ module snax_local_mem_mux #(
 
 // verilog_lint: waive-stop line-length
 // verilog_lint: waive-stop no-trailing-spaces
+// verilog_lint: waive-stop explicit-parameter-storage-type
 
 endmodule
 

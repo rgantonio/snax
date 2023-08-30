@@ -80,6 +80,8 @@ jobs:
           exclude_paths: |
             sw/snRuntime/src/omp/interface.h
             hw/snax_shell/*
+            hw/remodel/*
+            hw/snax_acc/*
 
   ##################
   # Lint YML Files #

@@ -11,13 +11,13 @@ TOTAL_ELEM = 1024
 
 elem_list = []
 for i in range(TOTAL_ELEM):
-    hex_code = '00000000' + hex(random.randrange(0,100,1))[2:]
+    hex_code = '00000000' + hex(random.randrange(0, 100, 1))[2:]
     hex_code = hex_code[-8:]
     elem_list.append(hex_code)
 
 row_list = []
 k = 0
 
-with open('data/data_mem.txt','w') as data_mem:
+with open('data/data_mem.txt', 'w') as data_mem:
     for elem in elem_list:
         data_mem.write(elem + '\n')

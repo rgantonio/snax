@@ -79,14 +79,16 @@
 //  This remodel comes from the original PULP tc_sram tech cell mode. We modify it to combine both
 //  tc_sram and tc_sram_impl versions into one. Also we include the option to initialize custom memory values.
 //  Additional comments are also given for better clarity. Code cleaning applied as well.
-// 
-//  Remodel author: Ryan Antonio (ryan.antonio@esat.kuleuven.be) 
+//
+//  Remodel author: Ryan Antonio (ryan.antonio@esat.kuleuven.be)
 //  Organization  : KU Leuven MICAS Lab
 //
 // -----------------------------------------------------------------------------
 
 // verilog_lint: waive-start line-length
 // verilog_lint: waive-start no-trailing-spaces
+// verilog_lint: waive-start explicit-parameter-storage-type
+// verilog_lint: waive-start unpacked-dimensions-range-ordering
 
 module remodel_tc_sram #(
   parameter int unsigned NumWords     = 32'd1024, // Number of Words in data array
@@ -196,7 +198,7 @@ module remodel_tc_sram #(
   // In case simulation initialization is disabled (SimInit == 'none'), don't assign to the sram
   // content at all. This improves simulation performance in tools like verilator
 
-  if (SimInit == "none") begin
+  if (SimInit == "none") begin: gen_none_values
 
     // write memory array without initialization
 
@@ -240,7 +242,7 @@ module remodel_tc_sram #(
 
     end
 
-  end else begin
+  end else begin: gen_yes_values
 
     // write memory array
     always_ff @(posedge clk_i or negedge rst_ni) begin
@@ -332,6 +334,8 @@ module remodel_tc_sram #(
 
 // verilog_lint: waive-stop line-length
 // verilog_lint: waive-stop no-trailing-spaces
+// verilog_lint: waive-stop explicit-parameter-storage-type
+// verilog_lint: waive-start unpacked-dimensions-range-ordering
 
 endmodule
 
@@ -348,14 +352,14 @@ remodel_tc_sram #(
   .ReadMemFile  ( ReadMemFile ),
   .PrintSimCfg  ( PrintSimCfg ),
   .ImplKey      ( ImplKey     ),
-  .impl_in_t    ( impl_in_t   ),  
+  .impl_in_t    ( impl_in_t   ),
   .impl_out_t   ( impl_out_t  ),
   .ImplOutSim   ( ImplOutSim  )
 ) i_remodel_tc_sram (
   .clk_i        ( clk_i       ),
   .rst_ni       ( rst_ni      ),
   .impl_i       ( impl_i      ),
-  .impl_o       ( impl_o      ), 
+  .impl_o       ( impl_o      ),
   .req_i        ( req_i       ),
   .we_i         ( we_i        ),
   .addr_i       ( addr_i      ),
