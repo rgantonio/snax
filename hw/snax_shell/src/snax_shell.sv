@@ -10,6 +10,20 @@
 // Solderpad Hardware License, Version 0.51, see LICENSE for details.
 // SPDX-License-Identifier: SHL-0.51
 // Author: Ryan Antonio (ryan.antonio@kuleuven.be)
+//
+// Description:
+// The SNAX shell is a derivative of the Snitch core cluter.
+// It contains the main Snitch core cluster components but with,
+// SNAX support where attaching accelerators with ease is possible.
+//
+// Major changes include the SNAX ports and the local memory
+// that would be dedicated for the SNAX ports.
+// 
+// Ideally users would use the local memory ports for streaming
+// data into their custom accelerators. SNAX control ports,
+// are read/write signals for the accelerator control.
+// Ideally, we would use register mapped ports.
+//
 //---------------------------------------------
 
 // verilog_lint: waive-start line-length
@@ -33,74 +47,53 @@
 import hwpe_ctrl_package::*;
 
 //---------------------------------------------
-// Snitch Core Complex (CC)
-// Contains the Snitch Integer Core + FPU + Private Accelerators
+// SNAX Shell
+// Contains the original Snitch core cluster, which includes
+// Snitch integer core and its L0 accelerators
+// Also contains the new SNAX ports for control and local memory
 //---------------------------------------------
-module snax_shell #(
 
-  // Address width of the buses
-  parameter int unsigned AddrWidth          = 0,
-  // Data width of the buses.
-  parameter int unsigned DataWidth          = 0,
-  // Data width of the AXI DMA buses.
-  parameter int unsigned DMADataWidth       = 0,
-  // Id width of the AXI DMA bus.
-  parameter int unsigned DMAIdWidth         = 0,
-  parameter int unsigned DMAAxiReqFifoDepth = 0,
-  parameter int unsigned DMAReqFifoDepth    = 0,
-  // Data port request type.
-  parameter type         dreq_t             = logic,
-  // Data port response type.
-  parameter type         drsp_t             = logic,
-  // TCDM Address Width
-  parameter int unsigned TCDMAddrWidth      = 0,
-  // Data port request type.
-  parameter type         tcdm_req_t         = logic,
-  // Data port response type.
-  parameter type         tcdm_rsp_t         = logic,
-  // TCDM User Payload
-  parameter type         tcdm_user_t        = logic,
-  parameter type         axi_req_t          = logic,
-  parameter type         axi_rsp_t          = logic,
-  parameter type         hive_req_t         = logic,
-  parameter type         hive_rsp_t         = logic,
-  parameter type         acc_req_t          = logic,
-  parameter type         acc_resp_t         = logic,
-  parameter type         dma_events_t       = logic,
+module snax_shell #(
+  parameter int unsigned AddrWidth              = 0,          // Address width of the buses
+  parameter int unsigned DataWidth              = 0,          // Data width of the buses.
+  parameter int unsigned DMADataWidth           = 0,          // Data width of the AXI DMA buses.
+  parameter int unsigned DMAIdWidth             = 0,          // Id width of the AXI DMA bus.
+  parameter int unsigned DMAAxiReqFifoDepth     = 0,          // FIFO depth for the AXI ports.
+  parameter int unsigned DMAReqFifoDepth        = 0,          // FIFO depth for the reqrsp ports.
+  parameter type         dreq_t                 = logic,      // Data port request type.
+  parameter type         drsp_t                 = logic,      // Data port response type.
+  parameter int unsigned TCDMAddrWidth          = 0,          // TCDM Address Width.
+  parameter type         tcdm_req_t             = logic,      // Data port request type.
+  parameter type         tcdm_rsp_t             = logic,      // Data port response type.
+  parameter type         tcdm_user_t            = logic,      // TCDM User Payload.
+  parameter type         axi_req_t              = logic,
+  parameter type         axi_rsp_t              = logic,
+  parameter type         hive_req_t             = logic,
+  parameter type         hive_rsp_t             = logic,
+  parameter type         acc_req_t              = logic,
+  parameter type         acc_resp_t             = logic,
+  parameter type         dma_events_t           = logic,
   parameter fpnew_pkg::fpu_implementation_t FPUImplementation = '0,
-  // Boot address of core.
-  parameter logic [31:0] BootAddr           = 32'h0000_1000,
-  // Reduced-register extension
-  parameter bit          RVE                = 0,
-  // Enable F and D Extension
-  parameter bit          RVF                = 1,
-  parameter bit          RVD                = 1,
-  parameter bit          XDivSqrt           = 0,
-  parameter bit          XF8                = 0,
-  parameter bit          XF8ALT             = 0,
-  parameter bit          XF16               = 0,
-  parameter bit          XF16ALT            = 0,
-  parameter bit          XFVEC              = 0,
-  parameter bit          XFDOTP             = 0,
-  // Enable Snitch DMA
-  parameter bit          Xdma               = 0,
-  // Has `frep` support
-  parameter bit          Xfrep              = 1,
-  // Has `SSR` support
-  parameter bit          Xssr               = 1,
-  // Has `IPU` support
-  parameter bit          Xipu               = 1,
-  // Has virtual memory support
-  parameter bit          VMSupport          = 1,
-  // Has HWPE MAC support
-  parameter bit          HwpeMac            = 0, 
-  // Has HWPE Ne16 support
-  parameter bit          HwpeNe16           = 0,
-  // Has HWPE Redmule support
-  parameter bit          HwpeRedmule        = 0,
-  // Local memory parameters
-  parameter int unsigned LocalMemSize       = 1024,
-  parameter int unsigned LocalMemAddrWidth  = $clog2(LocalMemSize),
+  parameter logic [31:0] BootAddr               = 32'h0000_1000,  // Boot address of core.
+  parameter bit          RVE                    = 0,          // Reduced-register extension
+  parameter bit          RVF                    = 1,          // Enable F and D Extension
+  parameter bit          RVD                    = 1,
+  parameter bit          XDivSqrt               = 0,
+  parameter bit          XF8                    = 0,
+  parameter bit          XF8ALT                 = 0,
+  parameter bit          XF16                   = 0,
+  parameter bit          XF16ALT                = 0,
+  parameter bit          XFVEC                  = 0,
+  parameter bit          XFDOTP                 = 0,
+  parameter bit          Xdma                   = 0,          // Enable Snitch DMA
+  parameter bit          Xfrep                  = 1,          // Has `frep` support
+  parameter bit          Xssr                   = 1,          // Has `SSR` support
+  parameter bit          Xipu                   = 1,          // Has `IPU` support
+  parameter bit          VMSupport              = 1,          // Has virtual memory support
+  parameter bit          SNAX                   = 0,          // Has SNAX support
+  parameter int unsigned LocalMemSize           = 1024,       // Local memory parameter to indicate size
+  parameter int unsigned LocalMemAddrWidth      = $clog2(LocalMemSize), // Local memory parameter, address width is dependent on LocalMemSize
+  parameter int unsigned LocalMemDataWidth      = 32,
   parameter int unsigned NumIntOutstandingLoads = 0,
   parameter int unsigned NumIntOutstandingMem   = 0,
   parameter int unsigned NumFPOutstandingLoads  = 0,
@@ -108,67 +101,56 @@ module snax_shell #(
   parameter int unsigned NumDTLBEntries         = 0,
   parameter int unsigned NumITLBEntries         = 0,
   parameter int unsigned NumSequencerInstr      = 0,
-  parameter int unsigned NumSsrs                = 0,
-  parameter int unsigned NumHwpeMemPorts        = 0,
-  parameter int unsigned SsrMuxRespDepth        = 0,
+  parameter int unsigned NumSsrs                = 0,          // SSR Parameter
+  parameter int unsigned SsrMuxRespDepth        = 0,          // SSR Parameter
+  parameter int unsigned SnaxLocalMemPorts      = 0,          // SNAX Parameter
   parameter snitch_ssr_pkg::ssr_cfg_t [NumSsrs-1:0] SsrCfgs = '0,
-  parameter logic [NumSsrs-1:0][4:0] SsrRegs = '0,
-  // Add isochronous clock-domain crossings e.g., make it possible to operate
-  // the core in a slower clock domain.
-  parameter bit          IsoCrossing        = 0,
-  // Timing Parameters
-  // Insert Pipeline registers into off-loading path (request)
-  parameter bit          RegisterOffloadReq = 0,
-  // Insert Pipeline registers into off-loading path (response)
-  parameter bit          RegisterOffloadRsp = 0,
-  // Insert Pipeline registers into data memory path (request)
-  parameter bit          RegisterCoreReq    = 0,
-  // Insert Pipeline registers into data memory path (response)
-  parameter bit          RegisterCoreRsp    = 0,
-  // Insert Pipeline register into the FPU data path (request)
-  parameter bit          RegisterFPUReq     = 0,
-  // Insert Pipeline registers after sequencer
-  parameter bit          RegisterSequencer  = 0,
-  // Insert Pipeline registers immediately before FPU datapath
-  parameter bit          RegisterFPUIn      = 0,
-  // Insert Pipeline registers immediately after FPU datapath
-  parameter bit          RegisterFPUOut     = 0,
+  parameter logic [NumSsrs-1:0][4:0] SsrRegs    = '0,
+  parameter bit          IsoCrossing            = 0,          // Add isochronous clock-domain crossings e.g., make it possible to operate the core in a slower clock domain.
+  parameter bit          RegisterOffloadReq     = 0,          // Insert Pipeline registers into off-loading path (request)
+  parameter bit          RegisterOffloadRsp     = 0,          // Insert Pipeline registers into off-loading path (response)
+  parameter bit          RegisterCoreReq        = 0,          // Insert Pipeline registers into data memory path (request)
+  parameter bit          RegisterCoreRsp        = 0,          // Insert Pipeline registers into data memory path (response)
+  parameter bit          RegisterFPUReq         = 0,          // Insert Pipeline register into the FPU data path (request)
+  parameter bit          RegisterSequencer      = 0,          // Insert Pipeline registers after sequencer
+  parameter bit          RegisterFPUIn          = 0,          // Insert Pipeline registers immediately before FPU datapath
+  parameter bit          RegisterFPUOut         = 0,          // Insert Pipeline registers immediately after FPU datapath
   parameter snitch_pma_pkg::snitch_pma_t SnitchPMACfg = '{default: 0},
-  // Derived parameter *Do not override*
+  // Derived parameter DO NOT OVERRIDE
   parameter int unsigned TCDMPorts = (NumSsrs > 1 ? NumSsrs : 1),
   parameter type addr_t = logic [AddrWidth-1:0],
   parameter type data_t = logic [DataWidth-1:0]
-
 ) (
-
-  input  logic                       clk_i,
-  input  logic                       clk_d2_i,
-  input  logic                       rst_ni,
-  input  logic                       rst_int_ss_ni,
-  input  logic                       rst_fp_ss_ni,
-  input  logic [31:0]                hart_id_i,
-  input  snax_snitch_pkg::interrupts_t    irq_i,
-  output hive_req_t                  hive_req_o,
-  input  hive_rsp_t                  hive_rsp_i,
-  // Core data ports
-  output dreq_t                      data_req_o,
-  input  drsp_t                      data_rsp_i,
-  // TCDM Streamer Ports
-  output tcdm_req_t [TCDMPorts-1:0]  tcdm_req_o,
-  input  tcdm_rsp_t [TCDMPorts-1:0]  tcdm_rsp_i,
-
-  // Accelerator Offload port
-  // DMA ports
-  output axi_req_t                   axi_dma_req_o,
-  input  axi_rsp_t                   axi_dma_res_i,
-  output logic                       axi_dma_busy_o,
-  output axi_dma_pkg::dma_perf_t     axi_dma_perf_o,
-  output dma_events_t                axi_dma_events_o,
-  // Core event strobes
-  output snax_snitch_pkg::core_events_t   core_events_o,
-  input  addr_t                      tcdm_addr_base_i,
-  input  addr_t                      localmem_addr_base_i
-
+  input  logic                               clk_i,
+  input  logic                               clk_d2_i,
+  input  logic                               rst_ni,
+  input  logic                               rst_int_ss_ni,
+  input  logic                               rst_fp_ss_ni,
+  input  logic [31:0]                        hart_id_i,
+  input  snax_snitch_pkg::interrupts_t       irq_i,
+  output hive_req_t                          hive_req_o,           // Hive ports, this is where icache is connected
+  input  hive_rsp_t                          hive_rsp_i,           // Hive ports, this is where icache is connected
+  output dreq_t                              data_req_o,           // Core data ports
+  input  drsp_t                              data_rsp_i,           // Core data ports
+  output tcdm_req_t [TCDMPorts-1:0]          tcdm_req_o,           // TCDM Streamer Ports
+  input  tcdm_rsp_t [TCDMPorts-1:0]          tcdm_rsp_i,           // TCDM Streamer Ports
+  output axi_req_t                           axi_dma_req_o,        // Accelerator Offload port
+  input  axi_rsp_t                           axi_dma_res_i,        // Accelerator Offload port
+  output logic                               axi_dma_busy_o,       // DMA ports
+  output axi_dma_pkg::dma_perf_t             axi_dma_perf_o,       // DMA ports
+  output dma_events_t                        axi_dma_events_o,     // DMA ports
+  output snax_snitch_pkg::core_events_t      core_events_o,        // Core event strobes
+  // SNAX signals
+  output acc_req_t                           snax_req_o,           
+  output logic                               snax_qvalid_o,       
+  input  logic                               snax_qready_i,         
+  input  acc_resp_t                          snax_resp_i,
+  input  logic                               snax_pvalid_i,
+  output logic                               snax_pready_o,
+  input  tcdm_req_t  [SnaxLocalMemPorts-1:0] snax_tcdm_req_i,
+  output tcdm_rsp_t  [SnaxLocalMemPorts-1:0] snax_tcdm_rsp_o,
+  input  addr_t                              tcdm_addr_base_i,     // Base address for slicing global TCDM when Snitch accesses memory
+  input  addr_t                              localmem_addr_base_i  // Base address boundary for local and global DMA transactions
 );
 
   //---------------------------------------------
@@ -191,9 +173,9 @@ module snax_shell #(
                           XF8ALT  ? 8 :  // Xf8alt ext.
                           0;             // Unused in case of no FP
 
-  //-------------------------------------------------------------------------
+  //-------------------------------
   // Typedefs
-  //-------------------------------------------------------------------------
+  //-------------------------------
   typedef struct packed {
     logic [4:0]  id;
     logic [11:0] word;
@@ -215,7 +197,7 @@ module snax_shell #(
   acc_resp_t dma_resp;
   acc_resp_t ipu_resp;
   acc_resp_t ssr_resp;
-  acc_resp_t snx_resp;
+  acc_resp_t snax_resp;
 
   logic acc_snitch_demux_qvalid, acc_snitch_demux_qready;
   logic acc_snitch_demux_qvalid_q, acc_snitch_demux_qready_q;
@@ -223,13 +205,13 @@ module snax_shell #(
   logic dma_qvalid, dma_qready;
   logic ipu_qvalid, ipu_qready;
   logic ssr_qvalid, ssr_qready;
-  logic snx_qvalid, snx_qready;
+  logic snax_qvalid, snax_qready;
 
   logic acc_pvalid, acc_pready;
   logic dma_pvalid, dma_pready;
   logic ipu_pvalid, ipu_pready;
   logic ssr_pvalid, ssr_pready;
-  logic snx_pvalid, snx_pready;
+  logic snax_pvalid, snax_pready;
   logic acc_demux_snitch_valid, acc_demux_snitch_ready;
   logic acc_demux_snitch_valid_q, acc_demux_snitch_ready_q;
 
@@ -248,9 +230,10 @@ module snax_shell #(
 
   `SNITCH_VM_TYPEDEF(AddrWidth)
 
-  //-------------------------------------------------------------------------
-  // Signals for internal DMA MUX-ing
-  //-------------------------------------------------------------------------
+
+  //-------------------------------
+  // Signals for internal DMA MUX-ing in SNAX
+  //-------------------------------
 
   logic aw_dma_select;
   logic ar_dma_select;
@@ -272,9 +255,11 @@ module snax_shell #(
 
   `AXI_TYPEDEF_ALL(axi_slv, addr_t, id_dma_slv_t, data_dma_t, strb_dma_t, user_dma_t)
 
-  //-------------------------------------------------------------------------
+  //-------------------------------
   // Snitch Integer Core
-  //-------------------------------------------------------------------------
+  //-------------------------------
+
+  localparam int unsigned EnableDma = Xdma || SNAX;
 
   snax_snitch #(
     .AddrWidth              ( AddrWidth              ),
@@ -294,7 +279,7 @@ module snax_shell #(
     .NumITLBEntries         ( NumITLBEntries         ),
     .RVE                    ( RVE                    ),
     .FP_EN                  ( FPEn                   ),
-    .Xdma                   ( Xdma                   ),
+    .Xdma                   ( EnableDma              ),
     .Xssr                   ( Xssr                   ),
     .RVF                    ( RVF                    ),
     .RVD                    ( RVD                    ),
@@ -339,10 +324,10 @@ module snax_shell #(
     .core_events_o          ( snitch_events             )
   );
 
-  //-------------------------------------------------------------------------
+  //-------------------------------
   // Iso components are for clock domain crossings.
   // It's an added feature where the integer core can operate at a slower clock domain.
-  //-------------------------------------------------------------------------
+  //-------------------------------
   reqrsp_iso #(
     .AddrWidth  ( AddrWidth                        ),
     .DataWidth  ( DataWidth                        ),
@@ -395,23 +380,23 @@ module snax_shell #(
     .dst_data_o  ( acc_demux_snitch         )
   );
 
-  //-------------------------------------------------------------------------
+  //-------------------------------
   // Accelerator Demux Port
-  //-------------------------------------------------------------------------
+  //-------------------------------
   stream_demux #(
     .N_OUP ( 6 )
   ) i_stream_demux_offload (
     .inp_valid_i  ( acc_snitch_demux_qvalid_q  ),
     .inp_ready_o  ( acc_snitch_demux_qready_q  ),
     .oup_sel_i    ( acc_snitch_demux_q.addr[$clog2(6)-1:0]  ),
-    .oup_valid_o  ( {snx_qvalid, ssr_qvalid, ipu_qvalid, dma_qvalid, hive_req_o.acc_qvalid, acc_qvalid} ),
-    .oup_ready_i  ( {snx_qready, ssr_qready, ipu_qready, dma_qready, hive_rsp_i.acc_qready, acc_qready} )
+    .oup_valid_o  ( {snax_qvalid, ssr_qvalid, ipu_qvalid, dma_qvalid, hive_req_o.acc_qvalid, acc_qvalid} ),
+    .oup_ready_i  ( {snax_qready, ssr_qready, ipu_qready, dma_qready, hive_rsp_i.acc_qready, acc_qready} )
   );
 
 
-  //-------------------------------------------------------------------------
+  //-------------------------------
   // To shared muldiv
-  //-------------------------------------------------------------------------
+  //-------------------------------
   assign hive_req_o.acc_req = acc_snitch_demux_q;
   assign acc_snitch_req = acc_snitch_demux_q;
 
@@ -421,19 +406,21 @@ module snax_shell #(
   ) i_stream_arbiter_offload (
     .clk_i       ( clk_i                    ),
     .rst_ni      ( rst_ni                   ),
-    .inp_data_i  ( {  snx_resp,   ssr_resp,   ipu_resp,   dma_resp,   hive_rsp_i.acc_resp,    acc_seq } ),
-    .inp_valid_i ( {snx_pvalid, ssr_pvalid, ipu_pvalid, dma_pvalid, hive_rsp_i.acc_pvalid, acc_pvalid } ),
-    .inp_ready_o ( {snx_pready, ssr_pready, ipu_pready, dma_pready, hive_req_o.acc_pready, acc_pready } ),
+    .inp_data_i  ( {  snax_resp,   ssr_resp,   ipu_resp,   dma_resp,   hive_rsp_i.acc_resp,    acc_seq } ),
+    .inp_valid_i ( {snax_pvalid, ssr_pvalid, ipu_pvalid, dma_pvalid, hive_rsp_i.acc_pvalid, acc_pvalid } ),
+    .inp_ready_o ( {snax_pready, ssr_pready, ipu_pready, dma_pready, hive_req_o.acc_pready, acc_pready } ),
     .oup_data_o  ( acc_demux_snitch_q       ),
     .oup_valid_o ( acc_demux_snitch_valid_q ),
     .oup_ready_i ( acc_demux_snitch_ready_q )
   );
 
-  //-------------------------------------------------------------------------
+  //-------------------------------
   // DMA generation
-  //-------------------------------------------------------------------------
+  //-------------------------------
   // If any HWPE module is declared, the DMA should be present as well.
-  if (Xdma || HwpeMac || HwpeNe16 || HwpeRedmule ) begin : gen_dma
+  // TODO: Think about how to elegantly encode this.
+  if ( SNAX ) begin : gen_snax_dma
+
     axi_dma_tc_snitch_fe #(
       .AddrWidth          ( AddrWidth                 ),
       .DataWidth          ( DataWidth                 ),
@@ -448,10 +435,8 @@ module snax_shell #(
     ) i_axi_dma_tc_snitch_fe (
       .clk_i              ( clk_i                     ),
       .rst_ni             ( rst_ni                    ),
-      //.axi_dma_req_o      ( axi_dma_req_o             ),
-      //.axi_dma_res_i      ( axi_dma_res_i             ),
-      .axi_dma_req_o      ( axi_dma_req     ),
-      .axi_dma_res_i      ( axi_dma_res     ),
+      .axi_dma_req_o      ( axi_dma_req               ),
+      .axi_dma_res_i      ( axi_dma_res               ),
       .dma_busy_o         ( axi_dma_busy_o            ),
       .acc_qaddr_i        ( acc_snitch_req.addr       ),
       .acc_qid_i          ( acc_snitch_req.id         ),
@@ -471,11 +456,50 @@ module snax_shell #(
       .dma_events_o       ( axi_dma_events_o          )
     );
 
+  end else if ( Xdma ) begin: gen_snitch_dma
+
+    axi_dma_tc_snitch_fe #(
+      .AddrWidth          ( AddrWidth                 ),
+      .DataWidth          ( DataWidth                 ),
+      .DMADataWidth       ( DMADataWidth              ),
+      .IdWidth            ( DMAIdWidth                ),
+      .DMAAxiReqFifoDepth ( DMAAxiReqFifoDepth        ),
+      .DMAReqFifoDepth    ( DMAReqFifoDepth           ),
+      .axi_req_t          ( axi_req_t                 ),
+      .axi_res_t          ( axi_rsp_t                 ),
+      .acc_resp_t         ( acc_resp_t                ),
+      .dma_events_t       ( dma_events_t              )
+    ) i_axi_dma_tc_snitch_fe (
+      .clk_i              ( clk_i                     ),
+      .rst_ni             ( rst_ni                    ),
+      .axi_dma_req_o      ( axi_dma_req_o             ),
+      .axi_dma_res_i      ( axi_dma_res_i             ),
+      .dma_busy_o         ( axi_dma_busy_o            ),
+      .acc_qaddr_i        ( acc_snitch_req.addr       ),
+      .acc_qid_i          ( acc_snitch_req.id         ),
+      .acc_qdata_op_i     ( acc_snitch_req.data_op    ),
+      .acc_qdata_arga_i   ( acc_snitch_req.data_arga  ),
+      .acc_qdata_argb_i   ( acc_snitch_req.data_argb  ),
+      .acc_qdata_argc_i   ( acc_snitch_req.data_argc  ),
+      .acc_qvalid_i       ( dma_qvalid                ),
+      .acc_qready_o       ( dma_qready                ),
+      .acc_pdata_o        ( dma_resp.data             ),
+      .acc_pid_o          ( dma_resp.id               ),
+      .acc_perror_o       ( dma_resp.error            ),
+      .acc_pvalid_o       ( dma_pvalid                ),
+      .acc_pready_i       ( dma_pready                ),
+      .hart_id_i          ( hart_id_i                 ),
+      .dma_perf_o         ( axi_dma_perf_o            ),
+      .dma_events_o       ( axi_dma_events_o          )
+    );
+
+    
+
   end else begin : gen_no_dma
 
-    //-------------------------------------------------------------------------
+    //-------------------------------
     // No DMA signals
-    //-------------------------------------------------------------------------
+    //-------------------------------
 
     // tie-off unused signals
     assign axi_dma_req_o   =  '0;
@@ -488,9 +512,9 @@ module snax_shell #(
     assign axi_dma_perf_o  =  '0;
   end
 
-  //-------------------------------------------------------------------------
+  //-------------------------------
   // IPU generation
-  //-------------------------------------------------------------------------
+  //-------------------------------
   if (Xipu) begin : gen_ipu
     snitch_int_ss # (
       .AddrWidth (AddrWidth),
@@ -532,10 +556,10 @@ module snax_shell #(
   snax_snitch_pkg::fpu_sequencer_trace_port_t fpu_sequencer_trace;
   // pragma translate_on
 
-  //-------------------------------------------------------------------------
+  //-------------------------------
   // FPSS Generation
   // Note: It also instantiates or prepares the SSRs
-  //-------------------------------------------------------------------------
+  //-------------------------------
   logic  [2:0][4:0] ssr_raddr;
   data_t [2:0]      ssr_rdata;
   logic  [2:0]      ssr_rvalid;
@@ -667,9 +691,9 @@ module snax_shell #(
   end
 
 
-  //-------------------------------------------------------------------------
+  //-------------------------------
   // Decide whether to go to SoC or TCDM
-  //-------------------------------------------------------------------------
+  //-------------------------------
   dreq_t data_tcdm_req;
   drsp_t data_tcdm_rsp;
 
@@ -707,12 +731,12 @@ module snax_shell #(
     mask: ({AddrWidth{1'b1}} << TCDMAddrWidth)
   };
 
-  //-------------------------------------------------------------------------
+  //-------------------------------
   // This is some kind of address decoding
   // That handles a natural power of two (napot)
   // Checkout ./ip/snitch/.bender/git/checkouts/common_cells-80087782e857d8e2/src/addr_decode.sv
   // For more details
-  //-------------------------------------------------------------------------
+  //-------------------------------
 
   addr_decode_napot #(
     .NoIndices        ( 2                     ),
@@ -751,9 +775,9 @@ module snax_shell #(
   );
 
 
-  //-------------------------------------------------------------------------
+  //-------------------------------
   // SSR Generation
-  //-------------------------------------------------------------------------
+  //-------------------------------
   if (Xssr) begin : gen_ssrs
 
     tcdm_req_t [NumSsrs-1:0] ssr_req;
@@ -776,9 +800,9 @@ module snax_shell #(
     `FFL(     cfg_rsp.id, ssr_cfg_req.id, cfg_req_hs, 0)
     `FFL(   cfg_rsp.data,   cfg_rsp_data, cfg_req_hs, 0)
 
-    //-------------------------------------------------------------------------
+    //-------------------------------
     // SSR operation / instruction decoder
-    //-------------------------------------------------------------------------
+    //-------------------------------
     always_comb begin
 
       import snax_riscv_instr::*;
@@ -831,10 +855,10 @@ module snax_shell #(
     assign ssr_resp.error = 1'b0;
     assign ssr_resp.data  = ssr_cfg_rsp.data;
 
-    //-------------------------------------------------------------------------
+    //-------------------------------
     // Allows to use memories with flow control (`valid`/`ready`) for requests but without flow
     // control for output data to be used in streams.
-    //-------------------------------------------------------------------------
+    //-------------------------------
     stream_to_mem #(
       .mem_req_t        ( ssr_cfg_req_t   ),
       .mem_resp_t       ( ssr_cfg_rsp_t   ),
@@ -909,10 +933,10 @@ module snax_shell #(
   end
 
 
-  //-------------------------------------------------------------------------
+  //-------------------------------
   // TCDM MUX
   // Has internal arbitration and FIFO buffers
-  //-------------------------------------------------------------------------
+  //-------------------------------
   tcdm_mux #(
     .NrPorts    ( 2                         ),
     .AddrWidth  ( TCDMAddrWidth             ),
@@ -953,27 +977,15 @@ module snax_shell #(
 
   end
 
-  //-------------------------------------------------------------------------
-  // Generate Snax HWPE Controller
-  //-------------------------------------------------------------------------
-  if (HwpeMac || HwpeNe16 || HwpeRedmule) begin: gen_hwpe_acc
-
-    // HWPE control interface
-    hwpe_ctrl_intf_periph #(
-        .ID_WIDTH ( 5 )
-    ) snax_periph (
-        .clk ( clk_i )
-    );
-
-    hwpe_stream_intf_tcdm snax_tcdm [NumHwpeMemPorts-1:0] (
-        .clk ( clk_i )
-    );
-
+  //-------------------------------
+  // Generate SNAX memory subsystem
+  //-------------------------------
+  if (SNAX) begin: gen_snax_acc
 
     // For the local memory definitions
+    // Declare these only when we need the SNAX
     localparam int unsigned DMAStrbWidth = DMADataWidth/8;
 
-    typedef logic                  [31:0] hwpe_mem_addr_t;
     typedef logic [LocalMemAddrWidth-1:0] mem_addr_t;
     typedef logic                  [31:0] mem_data_t;
     typedef logic                  [ 3:0] mem_strb_t;
@@ -982,189 +994,7 @@ module snax_shell #(
     typedef logic      [DMADataWidth-1:0] dma_data_t;
     typedef logic      [DMAStrbWidth-1:0] dma_strb_t;
 
-    typedef struct packed {
-      logic           [NumHwpeMemPorts-1:0]  req;
-      logic           [NumHwpeMemPorts-1:0]  gnt;
-      hwpe_mem_addr_t [NumHwpeMemPorts-1:0]  add;
-      logic           [NumHwpeMemPorts-1:0]  wen;
-      mem_strb_t      [NumHwpeMemPorts-1:0]  be;
-      mem_data_t      [NumHwpeMemPorts-1:0]  data;
-      mem_data_t      [NumHwpeMemPorts-1:0]  r_data;
-      logic           [NumHwpeMemPorts-1:0]  r_valid;
-      logic                                  r_opc;
-      logic                                  r_user;
-    } loc_mem_t;
-
-    loc_mem_t snax_mem;
-
-    // SNAX HWPE controller
-    snax_hwpe_ctrl #(
-      .DataWidth    ( DataWidth          ), // Default data width
-      .acc_req_t    ( acc_req_t          ), // Memory request payload type, usually write enable, write data, etc.
-      .acc_resp_t   ( acc_resp_t         )  // Memory response payload type, usually read data
-    ) i_snax_hwpe_ctrl (
-      .clk_i        ( clk_i              ), // Clock
-      .rst_ni       ( rst_ni             ), // Asynchronous reset, active low
-      .req_i        ( acc_snitch_demux_q ), // Request stream interface, payload
-      .req_valid_i  ( snx_qvalid         ), // Request stream interface, payload is valid for transfer
-      .req_ready_o  ( snx_qready         ), // Request stream interface, payload can be accepted
-      .resp_o       ( snx_resp           ), // Response stream interface, payload
-      .resp_valid_o ( snx_pvalid         ), // Response stream interface, payload is valid for transfer
-      .resp_ready_i ( snx_pready         ), // Response stream interface, payload can be accepted
-      .periph       ( snax_periph        )  // periph master port
-    );
-
-
-    //-------------------------------------------------------------------------
-    // Main MAC generation
-    //-------------------------------------------------------------------------
-    if (HwpeMac) begin: gen_hwpe_mac
-
-      import mac_package::*;
-
-      // Main MAC engine
-      mac_top_wrap #(
-          .N_CORES      ( 1                ),
-          .MP           ( NumHwpeMemPorts  ),
-          .ID           ( 5                )
-      ) i_mac_top (
-        .clk_i          ( clk_i               ),
-        .rst_ni         ( rst_ni              ),
-        .test_mode_i    ( 1'b0                ),
-        .evt_o          (                     ),      // Unused
-        .tcdm_req       ( snax_mem.req        ),
-        .tcdm_gnt       ( snax_mem.gnt        ),      // input
-        .tcdm_add       ( snax_mem.add        ),
-        .tcdm_wen       ( snax_mem.wen        ),
-        .tcdm_be        ( snax_mem.be         ),
-        .tcdm_data      ( snax_mem.data       ),
-        .tcdm_r_data    ( snax_mem.r_data     ),      // input
-        .tcdm_r_valid   ( snax_mem.r_valid    ),      // input
-        .periph_req     ( snax_periph.req     ),
-        .periph_gnt     ( snax_periph.gnt     ),
-        .periph_add     ( snax_periph.add     ),
-        .periph_wen     ( snax_periph.wen     ),
-        .periph_be      ( snax_periph.be      ),
-        .periph_data    ( snax_periph.data    ),
-        .periph_id      ( snax_periph.id      ),
-        .periph_r_data  ( snax_periph.r_data  ),
-        .periph_r_valid ( snax_periph.r_valid ),
-        .periph_r_id    ( snax_periph.r_id    )
-      );
-
-    //-------------------------------------------------------------------------
-    // Main NE16 generation
-    //-------------------------------------------------------------------------
-    end else if (HwpeNe16) begin: gen_hwpe_ne16 
-
-      import ne16_package::*;
-
-      ne16_top_wrap #(
-        .TP_IN          ( NE16_TP_IN          ),      // Default 16
-        .TP_OUT         ( NE16_TP_OUT         ),      // Default 32
-        .CNT            ( VLEN_CNT_SIZE       ),      // Default 16
-        .BW             ( NE16_MEM_BANDWIDTH_EXT ),   // Default 288 ( 9 x 32 bits )
-        .ID             ( 5                   ), 
-        .N_CORES        ( NR_CORES            ),      // Default 9
-        .N_CONTEXT      ( NR_CONTEXT          )       // Default 1
-      ) i_ne16_top_wrap (
-        .clk_i          ( clk_i               ),
-        .rst_ni         ( rst_ni              ),
-        .test_mode_i    ( 1'b0                ),
-        .evt_o          (                     ),      // Unused
-        .busy_o         (                     ),
-        .periph_req     ( snax_periph.req     ),
-        .periph_gnt     ( snax_periph.gnt     ),
-        .periph_add     ( snax_periph.add     ),
-        .periph_wen     ( snax_periph.wen     ),
-        .periph_be      ( snax_periph.be      ),
-        .periph_data    ( snax_periph.data    ),
-        .periph_id      ( snax_periph.id      ),
-        .periph_r_data  ( snax_periph.r_data  ),
-        .periph_r_valid ( snax_periph.r_valid ),
-        .periph_r_id    ( snax_periph.r_id    ),
-        .tcdm_req       ( snax_mem.req            ),
-        .tcdm_gnt       ( snax_mem.gnt            ),      // input
-        .tcdm_add       ( snax_mem.add            ),
-        .tcdm_wen       ( snax_mem.wen            ),
-        .tcdm_be        ( snax_mem.be             ),
-        .tcdm_data      ( snax_mem.data           ),
-        .tcdm_r_data    ( snax_mem.r_data         ),      // input
-        .tcdm_r_valid   ( snax_mem.r_valid        )       // input
-      );
-
-
-    end else if (HwpeRedmule) begin: gen_redmule
-
-      import redmule_pkg::*;
-
-      redmule_wrap #(
-        .ID_WIDTH          ( 5                   ),
-        .N_CORES           ( 1                   ),
-        .DW                ( DATA_W              ),
-        .MP                ( DATA_W/32           )
-      ) i_redmule_wrap     (
-        .clk_i             ( clk_i               ),
-        .rst_ni            ( rst_ni              ),
-        .test_mode_i       ( 1'b0                ),
-        .evt_o             (                     ),
-        .busy_o            (                     ),
-        .tcdm_req_o        ( snax_mem.req            ),
-        .tcdm_add_o        ( snax_mem.add            ),
-        .tcdm_wen_o        ( snax_mem.wen            ),
-        .tcdm_be_o         ( snax_mem.be             ),
-        .tcdm_data_o       ( snax_mem.data           ),
-        .tcdm_gnt_i        ( snax_mem.gnt            ),
-        .tcdm_r_data_i     ( snax_mem.r_data         ),
-        .tcdm_r_valid_i    ( snax_mem.r_valid   ),
-        .tcdm_r_opc_i      ( '0          ), //TODO: Fix me later
-        .tcdm_r_user_i     ( '0         ), //TODO: Fix me later
-        .periph_req_i      ( snax_periph.req     ),
-        .periph_gnt_o      ( snax_periph.gnt     ),
-        .periph_add_i      ( snax_periph.add     ),
-        .periph_wen_i      ( snax_periph.wen     ),
-        .periph_be_i       ( snax_periph.be      ),
-        .periph_data_i     ( snax_periph.data    ),
-        .periph_id_i       ( snax_periph.id      ),
-        .periph_r_data_o   ( snax_periph.r_data  ),
-        .periph_r_valid_o  ( snax_periph.r_valid ),
-        .periph_r_id_o     ( snax_periph.r_id    )
-      );
-
-    end
-
-
-    tcdm_req_t [NumHwpeMemPorts-1:0] hwpe_tcdm_req;
-    tcdm_rsp_t [NumHwpeMemPorts-1:0] hwpe_tcdm_rsp;
-
-    // Manual remapping
-    for (i = 0; i < NumHwpeMemPorts; i++) begin: gen_map_translate
-
-      assign snax_tcdm       [i].req  = snax_mem.req [i];
-      assign snax_mem.gnt    [i]      = snax_tcdm    [i].gnt;
-      assign snax_tcdm       [i].add  = snax_mem.add [i];
-      assign snax_tcdm       [i].wen  = snax_mem.wen [i];
-      assign snax_tcdm       [i].be   = snax_mem.be  [i];
-      assign snax_tcdm       [i].data = snax_mem.data[i];
-      assign snax_mem.r_data [i]      = snax_tcdm    [i].r_data;
-      assign snax_mem.r_valid[i]      = snax_tcdm    [i].r_valid;
-
-      snax_hwpe_to_reqrsp #(
-        .DataWidth        ( DataWidth         ),  // Data width to use
-        .tcdm_req_t       ( tcdm_req_t        ),  // TCDM request type
-        .tcdm_rsp_t       ( tcdm_rsp_t        )   // TCDM response type
-      ) i_snax_hwpe_to_reqrsp (
-        .clk_i            ( clk_i             ),  // Clock
-        .rst_ni           ( rst_ni            ),  // Asynchronous reset, active low
-        .tcdm_req_o       ( hwpe_tcdm_req[i]  ),  // TCDM valid ready format
-        .tcdm_rsp_i       ( hwpe_tcdm_rsp[i]  ),  // TCDM valid ready format
-        .hwpe_tcdm_slave  ( snax_tcdm[i]      )   // HWPE TCDM slave port
-      );
-    end
-
-    // TODO: Fix and clean me later
-    localparam int unsigned LocalMemWidth = 32;
-    localparam int unsigned LocalMemBanks = DMADataWidth/LocalMemWidth; // Parameter that maximizes DMA bandwidth
+    localparam int unsigned LocalMemBanks = DMADataWidth/LocalMemDataWidth; // Parameter that maximizes DMA bandwidth
 
     `MEM_TYPEDEF_ALL(mem, mem_addr_t, mem_data_t, mem_strb_t, tcdm_user_t)
     `MEM_TYPEDEF_ALL(mem_dma, dma_addr_t, dma_data_t, dma_strb_t, logic)
@@ -1175,30 +1005,45 @@ module snax_shell #(
     mem_req_t [LocalMemBanks-1:0] local_mem_req;
     mem_rsp_t [LocalMemBanks-1:0] local_mem_rsp;
 
-    //assign local_mem_narrow_req_test = local_mem_narrow_req;
+    // Simple rewiring for SNAX signals
+    assign snax_req_o    = acc_snitch_demux;
+    assign snax_qvalid_o = snax_qvalid;
+    assign snax_qready   = snax_qready_i;
+
+    assign snax_resp     = snax_resp_i;
+    assign snax_pvalid   = snax_pvalid_i;
+    assign snax_pready_o = snax_pready;
+
+    //---------------------------------------
+    // Convert snax_tcdm_reqrsp signals into local reqrsp signals
+    // Get input from the accelerator engine
+    // Output goes into the i_snax_mem_wide_narrow_mux
+    // Which MUXes between narrow and wide (DMA) memory requests
+    //---------------------------------------
 
     snitch_tcdm_interconnect #(
-      .NumInp                ( NumHwpeMemPorts      ),
+      .NumInp                ( SnaxLocalMemPorts    ),
       .NumOut                ( LocalMemBanks        ),
       .tcdm_req_t            ( tcdm_req_t           ),
       .tcdm_rsp_t            ( tcdm_rsp_t           ),
       .mem_req_t             ( mem_req_t            ),
       .mem_rsp_t             ( mem_rsp_t            ),
       .MemAddrWidth          ( 6                    ), //TODO: Make me flexible later and note that this has something to do with the tcdm_reqrsp_t dependency. 
-      .DataWidth             ( LocalMemWidth        ),
+      .DataWidth             ( LocalMemDataWidth    ),
       .user_t                ( tcdm_user_t          ),
       .MemoryResponseLatency ( 1                    )  
-    ) i_tcdm_interconnect (
+    ) i_snax_tcdm_interconnect (
       .clk_i                 ( clk_i                ),
       .rst_ni                ( rst_ni               ),
-      .req_i                 ( hwpe_tcdm_req        ),
-      .rsp_o                 ( hwpe_tcdm_rsp        ),
+      .req_i                 ( snax_tcdm_req_i      ),
+      .rsp_o                 ( snax_tcdm_rsp_o      ),
       .mem_req_o             ( local_mem_narrow_req ),
       .mem_rsp_i             ( local_mem_narrow_rsp )
     );
 
     //---------------------------------------
     // Multiplexing for DMA
+    // Changing between global and local memory requests
     //---------------------------------------
 
     // This one is for address mapping things
@@ -1207,17 +1052,21 @@ module snax_shell #(
     assign dma_addr_map = '{
       idx : 1,
       base: localmem_addr_base_i,
-      mask: ({AddrWidth{1'b1}} << TCDMAddrWidth) // TODO, change me later with local mem address width
+      mask: ({AddrWidth{1'b1}} << 12) // TODO, change me later with local mem address width. Also make sure to test the DMA out.
     };
 
-
+    //---------------------------------------
+    // Control signal aw_dma_select
+    // Dependent on AW address
+    // If beyond localmem_addr_base_i, then we access global memory
+    //---------------------------------------
     addr_decode_napot #(
       .NoIndices        ( 2                     ),
       .NoRules          ( 1                     ),
       .addr_t           ( logic [AddrWidth-1:0] ),
       .rule_t           ( reqrsp_rule_t         )
-    ) i_dma_mux_aw (
-      .addr_i           ( axi_dma_req_o.aw.addr ),  // Change what needs to be accessed
+    ) i_snax_dma_sel_aw (
+      .addr_i           ( axi_dma_req.aw.addr   ),  
       .addr_map_i       ( dma_addr_map          ),
       .idx_o            ( aw_dma_select         ),
       .dec_valid_o      (                       ),
@@ -1226,13 +1075,18 @@ module snax_shell #(
       .default_idx_i    ( '0                    )
     );
 
+    //---------------------------------------
+    // Control signal ar_dma_select
+    // Dependent on AR address
+    // If beyond localmem_addr_base_i, then we access global memory
+    //---------------------------------------
     addr_decode_napot #(
       .NoIndices        ( 2                     ),
       .NoRules          ( 1                     ),
       .addr_t           ( logic [AddrWidth-1:0] ),
       .rule_t           ( reqrsp_rule_t         )
-    ) i_dma_mux_ar (
-      .addr_i           ( axi_dma_req_o.ar.addr ),  // Change what needs to be accessed
+    ) i_snax_dma_sel_ar (
+      .addr_i           ( axi_dma_req.ar.addr   ),
       .addr_map_i       ( dma_addr_map          ),
       .idx_o            ( ar_dma_select         ),
       .dec_valid_o      (                       ),
@@ -1241,6 +1095,12 @@ module snax_shell #(
       .default_idx_i    ( '0                    )
     );
 
+    //---------------------------------------
+    // De-muxing whether the signal from the Snitch DMA
+    // goes to local memory or the global memory ports
+    // Note that axi_dma_req_muxout[1] goes to global memory
+    // and axi_dma_req_muxout[0] goes to local memory
+    //---------------------------------------
     axi_demux #(
       .AxiIdWidth      ( DMAIdWidth         ),  // ID Width
       .AxiLookBits     ( DMAIdWidth         ),
@@ -1252,7 +1112,7 @@ module snax_shell #(
       .axi_req_t       ( axi_slv_req_t      ),
       .axi_resp_t      ( axi_slv_resp_t     ),
       .NoMstPorts      ( 2                  )
-    ) i_axi_demux (
+    ) i_snax_axi_demux (
       .clk_i           ( clk_i              ),  // Clock
       .rst_ni          ( rst_ni             ),  // Asynchronous reset active low
       .test_i          ( 1'b0               ),  // Testmode enable
@@ -1264,32 +1124,35 @@ module snax_shell #(
       .mst_resps_i     ( axi_dma_res_muxout )
     );
 
+    // Global memory signal
     assign axi_dma_req_o         = axi_dma_req_muxout[1];
     assign axi_dma_res_muxout[1] = axi_dma_res_i;
 
     // Need to translate the axi_dma_req_muxout[0] to memrequest responses
     typedef logic [    47:0] tcdm_addr_t; //Watch out for me
-    `TCDM_TYPEDEF_ALL(tcdm_dma, tcdm_addr_t, data_dma_t, strb_dma_t, logic)
 
-    tcdm_dma_req_t locmem_dma_req;
-    tcdm_dma_rsp_t locmem_dma_rsp;
+    `TCDM_TYPEDEF_ALL(snax_tcdm_dma, tcdm_addr_t, data_dma_t, strb_dma_t, logic)
+
+    snax_tcdm_dma_req_t locmem_dma_req;
+    snax_tcdm_dma_rsp_t locmem_dma_rsp;
 
     addr_t locmem_dma_req_q_addr_nontrunc;
 
+    // Convert AXI signals into reqrsp that goes into local memory later
     axi_to_mem_interleaved #(
-        .axi_req_t    ( axi_slv_req_t       ),
-        .axi_resp_t   ( axi_slv_resp_t      ),
-        .AddrWidth    ( AddrWidth           ),
-        .DataWidth    ( DMADataWidth        ),
-        .IdWidth      ( WideIdWidthOut      ),
-        .NumBanks     ( 1                   ),
-        .BufDepth     ( 1                   )  // Leave at one for now
-    ) i_axi_to_mem_dma (
-        .clk_i        ( clk_i                       ),
-        .rst_ni       ( rst_ni                      ),
-        .busy_o       (                             ),
-        .axi_req_i    ( axi_dma_req_muxout[0]       ),
-        .axi_resp_o   ( axi_dma_res_muxout[0]       ),
+        .axi_req_t    ( axi_slv_req_t                  ),
+        .axi_resp_t   ( axi_slv_resp_t                 ),
+        .AddrWidth    ( AddrWidth                      ),
+        .DataWidth    ( DMADataWidth                   ),
+        .IdWidth      ( WideIdWidthOut                 ),
+        .NumBanks     ( 1                              ),
+        .BufDepth     ( 1                              )  // Leave at one for now
+    ) i_snax_axi_to_mem_dma (
+        .clk_i        ( clk_i                          ),
+        .rst_ni       ( rst_ni                         ),
+        .busy_o       (                                ),
+        .axi_req_i    ( axi_dma_req_muxout[0]          ),
+        .axi_resp_o   ( axi_dma_res_muxout[0]          ),
         .mem_req_o    ( locmem_dma_req.q_valid         ),
         .mem_gnt_i    ( locmem_dma_rsp.q_ready         ),
         .mem_addr_o   ( locmem_dma_req_q_addr_nontrunc ),
@@ -1305,97 +1168,109 @@ module snax_shell #(
     assign locmem_dma_req.q.amo  = reqrsp_pkg::AMONone;
     assign locmem_dma_req.q.user = '0;
 
-    mem_dma_req_t sb_dma_req;
-    mem_dma_rsp_t sb_dma_rsp;
+    mem_dma_req_t local_mem_wide_req;
+    mem_dma_rsp_t local_mem_wide_rsp;
 
+    //---------------------------------------
+    // From the local req rsp in DMA, we use a TCDM interconnect
+    // To parallelize the accesses to local memory
+    //---------------------------------------
     snitch_tcdm_interconnect #(
-        .NumInp                 ( 1                  ),
-        .NumOut                 ( 1                  ),
-        .tcdm_req_t             ( tcdm_dma_req_t     ),
-        .tcdm_rsp_t             ( tcdm_dma_rsp_t     ),
-        .mem_req_t              ( mem_dma_req_t      ),
-        .mem_rsp_t              ( mem_dma_rsp_t      ),
-        .user_t                 ( logic              ),
-        .MemAddrWidth           ( 10                 ),
-        .DataWidth              ( DMADataWidth       ),
-        .MemoryResponseLatency  ( 1                  )
-    ) i_dma_interconnect (
-        .clk_i                  ( clk_i              ),
-        .rst_ni                 ( rst_ni             ),
-        .req_i                  ( locmem_dma_req     ),
-        .rsp_o                  ( locmem_dma_rsp     ),
-        .mem_req_o              ( sb_dma_req         ),
-        .mem_rsp_i              ( sb_dma_rsp         )
+        .NumInp                 ( 1                   ),
+        .NumOut                 ( 1                   ),
+        .tcdm_req_t             ( snax_tcdm_dma_req_t ),
+        .tcdm_rsp_t             ( snax_tcdm_dma_rsp_t ),
+        .mem_req_t              ( mem_dma_req_t       ),
+        .mem_rsp_t              ( mem_dma_rsp_t       ),
+        .user_t                 ( logic               ),
+        .MemAddrWidth           ( 10                  ),
+        .DataWidth              ( DMADataWidth        ),
+        .MemoryResponseLatency  ( 1                   )
+    ) i_snax_dma_interconnect (
+        .clk_i                  ( clk_i               ),
+        .rst_ni                 ( rst_ni              ),
+        .req_i                  ( locmem_dma_req      ),
+        .rsp_o                  ( locmem_dma_rsp      ),
+        .mem_req_o              ( local_mem_wide_req  ),
+        .mem_rsp_i              ( local_mem_wide_rsp  )
     );
 
     //---------------------------------------
-    // Accessing actual memory
+    // MUX that selects between the narrow stream requests
+    // or the wide DMA requests
     //---------------------------------------
     mem_wide_narrow_mux #(
-      .NarrowDataWidth  ( 32                ), // TODO: Fix me later
-      .WideDataWidth    ( DMADataWidth      ),
-      .mem_narrow_req_t ( mem_req_t         ),
-      .mem_narrow_rsp_t ( mem_rsp_t         ),
-      .mem_wide_req_t   ( mem_dma_req_t     ),
-      .mem_wide_rsp_t   ( mem_dma_rsp_t     )
-    ) i_mem_wide_narrow_mux (
+      .NarrowDataWidth  ( 32                         ),
+      .WideDataWidth    ( DMADataWidth               ),
+      .mem_narrow_req_t ( mem_req_t                  ),
+      .mem_narrow_rsp_t ( mem_rsp_t                  ),
+      .mem_wide_req_t   ( mem_dma_req_t              ),
+      .mem_wide_rsp_t   ( mem_dma_rsp_t              )
+    ) i_snax_mem_wide_narrow_mux (
       .clk_i,
       .rst_ni,
-      .in_narrow_req_i  ( local_mem_narrow_req  ),
-      .in_narrow_rsp_o  ( local_mem_narrow_rsp  ),
-      .in_wide_req_i    ( sb_dma_req            ),
-      .in_wide_rsp_o    ( sb_dma_rsp            ), // TODO: Add me later
-      .out_req_o        ( local_mem_req         ),
-      .out_rsp_i        ( local_mem_rsp         ),
-      .sel_wide_i       ( sb_dma_req.q_valid    )  // TODO: Add me later
+      .in_narrow_req_i  ( local_mem_narrow_req       ),
+      .in_narrow_rsp_o  ( local_mem_narrow_rsp       ),
+      .in_wide_req_i    ( local_mem_wide_req         ),
+      .in_wide_rsp_o    ( local_mem_wide_rsp         ), 
+      .out_req_o        ( local_mem_req              ),
+      .out_rsp_i        ( local_mem_rsp              ),
+      .sel_wide_i       ( local_mem_wide_req.q_valid ) 
     );
     
-    
+    //---------------------------------------
+    // Local memory
+    //---------------------------------------
     snax_local_mem_mux #(
-      .LocalMemAddrWidth  ( LocalMemAddrWidth ),
-      .NarrowDataWidth    ( 32                ),
-      .WideDataWidth      ( DMADataWidth      ),
-      .LocalMemSize       ( LocalMemSize      ),
-      .NumBanks           ( 16                ), // Need to maximize banks depending on WideDataWidth
-      .SimInit            ( "random"          ),
-      .addr_t             ( mem_addr_t        ),
-      .data_t             ( mem_data_t        ),
-      .strb_t             ( mem_strb_t        ),
-      .mem_req_t          ( mem_req_t         ), // Memory request payload type, usually write enable, write data, etc.
-      .mem_rsp_t          ( mem_rsp_t         )  // Memory response payload type, usually read data
+      .LocalMemAddrWidth  ( LocalMemAddrWidth           ),
+      .NarrowDataWidth    ( 32                          ),
+      .WideDataWidth      ( DMADataWidth                ),
+      .LocalMemSize       ( LocalMemSize                ),
+      .NumBanks           ( LocalMemBanks               ), // Need to maximize banks depending on WideDataWidth
+      .SimInit            ( "random"                    ),
+      .ReadMem            ( 1'b1                        ),
+      .ReadMemFile        ( "./mem/data/data_mem.txt"   ),
+      .addr_t             ( mem_addr_t                  ),
+      .data_t             ( mem_data_t                  ),
+      .strb_t             ( mem_strb_t                  ),
+      .mem_req_t          ( mem_req_t                   ), // Memory request payload type, usually write enable, write data, etc.
+      .mem_rsp_t          ( mem_rsp_t                   )  // Memory response payload type, usually read data
     ) i_snax_local_mem_mux (
-      .clk_i              ( clk_i             ), // Clock
-      .rst_ni             ( rst_ni            ), // Asynchronous reset, active low
-      .dma_access_i       ( '0                ),
-      .mem_req_i          ( local_mem_req     ), // Memory valid-ready format
-      .mem_rsp_o          ( local_mem_rsp     )  // Memory valid-ready format local_mem_narrow_rsp
+      .clk_i              ( clk_i                       ), // Clock
+      .rst_ni             ( rst_ni                      ), // Asynchronous reset, active low
+      .dma_access_i       ( local_mem_wide_req.q_valid  ),
+      .mem_req_i          ( local_mem_req               ), // Memory valid-ready format
+      .mem_rsp_o          ( local_mem_rsp               )  // Memory valid-ready format local_mem_narrow_rsp
     );
     
-  
 
   end else begin: gen_no_snax
 
-    assign snx_qready = '0;
-    assign snx_resp   = '0;
-    assign snx_pvalid = '0;
+    assign snax_qready = '0;
+    assign snax_resp   = '0;
+    assign snax_pvalid = '0;
+
+    assign snax_req_o    = acc_snitch_demux;
+    assign snax_qvalid_o = snax_qvalid;
+    assign snax_pready_o = snax_pready;
 
   end
 
   
 
-  //-------------------------------------------------------------------------
+  //-------------------------------
   // Core events for performance counters
-  //-------------------------------------------------------------------------
+  //-------------------------------
   assign core_events_o.retired_instr = snitch_events.retired_instr;
   assign core_events_o.retired_load  = snitch_events.retired_load;
   assign core_events_o.retired_i     = snitch_events.retired_i;
   assign core_events_o.retired_acc   = snitch_events.retired_acc;
 
-  //-------------------------------------------------------------------------
+  //-------------------------------
   // Tracers
   // These are for performance checking only
   // Not meant to be synthesized
-  //-------------------------------------------------------------------------
+  //-------------------------------
   // pragma translate_off
 
   int f;

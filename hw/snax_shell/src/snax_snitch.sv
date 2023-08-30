@@ -836,10 +836,37 @@ module snax_snitch import snax_snitch_pkg::*; import snax_riscv_instr::*; #(
       // CSR Instructions
       //---------------------------------------------
 
+      // Copy-pasted as guide for this to happen
+
+      // SNAX_WR_ACC: begin
+      //   acc_qvalid_o    = valid_instr;
+      //   opa_select      = Reg;
+      //   opb_select      = Reg;
+      //   //opa_select = Reg;
+      //   //opb_select = IImmediate;
+      //   acc_qreq_o.addr = SNAX_CSR;
+      // end
+
+      // SNAX_RD_ACC: begin
+      //   write_rd        = 1'b0;
+      //   uses_rd         = 1'b1;
+      //   acc_qvalid_o    = valid_instr;
+      //   opa_select      = Reg;
+      //   opb_select      = Reg;
+      //   acc_register_rd = 1'b1;
+      //   acc_qreq_o.addr = SNAX_CSR;
+      // end
+
+
       CSRRW: begin // Atomic Read/Write CSR
         opa_select = Reg;
         opb_select = None;
         rd_select = RdBypass;
+        // We can re-use opa_select, opb_select, and rd_select
+        // but for CSR, depending on the Uimmediate field, we need to MUX
+        // signals that go into the accelerator isntead
+        // We need to mux the use of ACC ports
+        // Checkout the CSRRSI and CSRRCI version
         rd_bypass = csr_rvalue;
         csr_en = valid_instr;
       end
@@ -893,6 +920,10 @@ module snax_snitch import snax_snitch_pkg::*; import snax_riscv_instr::*; #(
           acc_qvalid_o = valid_instr;
         end
       end
+      //---------------------------------------------
+      // End of CSR instructions
+      //---------------------------------------------
+
       ECALL: ecall = 1'b1;
       EBREAK: ebreak = 1'b1;
       // Environment return
@@ -1088,6 +1119,8 @@ module snax_snitch import snax_snitch_pkg::*; import snax_riscv_instr::*; #(
         acc_qvalid_o    = valid_instr;
         opa_select      = Reg;
         opb_select      = Reg;
+        //opa_select = Reg;
+        //opb_select = IImmediate;
         acc_qreq_o.addr = SNAX_CSR;
       end
 

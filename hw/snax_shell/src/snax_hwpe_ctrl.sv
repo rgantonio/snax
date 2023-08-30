@@ -11,19 +11,19 @@
 import snax_riscv_instr::*;
 
 module snax_hwpe_ctrl #(
-  parameter int unsigned DataWidth       = 64,
-  parameter type acc_req_t  = logic,          // Memory request payload type, usually write enable, write data, etc.
-  parameter type acc_resp_t = logic           // Memory response payload type, usually read data
+  parameter int unsigned DataWidth  = 64,
+  parameter type acc_req_t          = logic,      // Memory request payload type, usually write enable, write data, etc.
+  parameter type acc_rsp_t          = logic       // Memory response payload type, usually read data
 )(
-  input  logic                  clk_i,        // Clock
-  input  logic                  rst_ni,       // Asynchronous reset, active low
-  input  acc_req_t              req_i,        // Request stream interface, payload
-  input  logic                  req_valid_i,  // Request stream interface, payload is valid for transfer
-  output logic                  req_ready_o,  // Request stream interface, payload can be accepted
-  output acc_resp_t             resp_o,       // Response stream interface, payload
-  output logic                  resp_valid_o, // Response stream interface, payload is valid for transfer
-  input  logic                  resp_ready_i, // Response stream interface, payload can be accepted
-  hwpe_ctrl_intf_periph.master  periph        // periph slave port
+  input  logic                      clk_i,        // Clock
+  input  logic                      rst_ni,       // Asynchronous reset, active low
+  input  acc_req_t                  req_i,        // Request stream interface, payload
+  input  logic                      req_valid_i,  // Request stream interface, payload is valid for transfer
+  output logic                      req_ready_o,  // Request stream interface, payload can be accepted
+  output acc_rsp_t                  resp_o,       // Response stream interface, payload
+  output logic                      resp_valid_o, // Response stream interface, payload is valid for transfer
+  input  logic                      resp_ready_i, // Response stream interface, payload can be accepted
+  hwpe_ctrl_intf_periph.master      periph        // periph slave port
 );
 
   //---------------------------------------------

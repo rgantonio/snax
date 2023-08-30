@@ -89,9 +89,10 @@
 /users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/common_cells-02aa01ee4a3b2e52/src/stream_xbar.sv
 /users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/common_cells-02aa01ee4a3b2e52/src/cdc_fifo_gray_clearable.sv
 /users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/common_cells-02aa01ee4a3b2e52/src/cdc_2phase_clearable.sv
-/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/common_cells-02aa01ee4a3b2e52/src/mem_to_banks.sv
+/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/common_cells-02aa01ee4a3b2e52/src/mem_to_banks_detailed.sv
 /users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/common_cells-02aa01ee4a3b2e52/src/stream_arbiter.sv
 /users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/common_cells-02aa01ee4a3b2e52/src/stream_omega_net.sv
+/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/common_cells-02aa01ee4a3b2e52/src/mem_to_banks.sv
 /users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/common_cells-02aa01ee4a3b2e52/src/deprecated/clock_divider_counter.sv
 /users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/common_cells-02aa01ee4a3b2e52/src/deprecated/clk_div.sv
 /users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/common_cells-02aa01ee4a3b2e52/src/deprecated/find_first_one.sv
@@ -162,6 +163,8 @@
 /users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/fpnew-afcaf014ef5047df/src/fpnew_divsqrt_multi.sv
 /users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/fpnew-afcaf014ef5047df/src/fpnew_fma.sv
 /users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/fpnew-afcaf014ef5047df/src/fpnew_fma_multi.sv
+/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/fpnew-afcaf014ef5047df/src/fpnew_sdotp_multi.sv
+/users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/fpnew-afcaf014ef5047df/src/fpnew_sdotp_multi_wrapper.sv
 /users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/fpnew-afcaf014ef5047df/src/fpnew_noncomp.sv
 /users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/fpnew-afcaf014ef5047df/src/fpnew_opgroup_block.sv
 /users/micas/rantonio/no_backup/rga-workspace/snitch_cluster/.bender/git/checkouts/fpnew-afcaf014ef5047df/src/fpnew_opgroup_fmt_slice.sv
