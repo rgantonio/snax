@@ -18,7 +18,7 @@
 //
 // Major changes include the SNAX ports and the local memory
 // that would be dedicated for the SNAX ports.
-// 
+//
 // Ideally users would use the local memory ports for streaming
 // data into their custom accelerators. SNAX control ports,
 // are read/write signals for the accelerator control.
@@ -1409,4 +1409,3 @@ module snax_shell #(
   // verilog_lint: waive-stop no-trailing-spaces
 
 endmodule
-
