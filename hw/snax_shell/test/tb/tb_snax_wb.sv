@@ -46,7 +46,7 @@ module tb_snax_wb;
     //---------------------------------------------
 
     parameter int unsigned PhysicalAddrWidth        = 48;
-    parameter int unsigned NarrowDataWidth          = 64;
+    parameter int unsigned NarrowDataWidth          = 32;
     parameter int unsigned WideDataWidth            = 512;
     parameter int unsigned WideIdWidthIn            = 1;
     parameter int unsigned WideUserWidth            = 1;
@@ -307,12 +307,12 @@ module tb_snax_wb;
     logic [PhysicalAddrWidth-1:0] inst_mem [0:1024];
     logic [PhysicalAddrWidth-1:0] instruction_addr_offset;
 
-	initial begin $readmemh("./mem/inst/dma_mac_test.txt", inst_mem); end
+		initial begin $readmemh("./mem/inst/mac_test.txt", inst_mem); end
 
-	// Dirty fix to offset the instruction memory since boot starts at 4096
-	always_comb begin
-		instruction_addr_offset = hive_req_o.inst_addr - 48'd4096;
-	end
+		// Dirty fix to offset the instruction memory since boot starts at 4096
+		always_comb begin
+			instruction_addr_offset = hive_req_o.inst_addr - 48'd4096;
+		end
 
     assign hive_rsp_i.inst_data  = inst_mem[(instruction_addr_offset >> 2)];
     assign hive_rsp_i.inst_ready = 1;
@@ -322,7 +322,7 @@ module tb_snax_wb;
     //---------------------------------------------
     logic [NarrowDataWidth-1:0] data_mem [0:255];
 
-	initial begin $readmemh("./mem/data/rand_data_1.txt", data_mem); end
+		initial begin $readmemh("./mem/data/rand_data_1.txt", data_mem); end
 
     // This signal is to fake a start-up because starting immediately on a load
     // Messes up the simulation so we need to have a "fake" start-up

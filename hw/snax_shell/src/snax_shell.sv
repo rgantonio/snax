@@ -1052,7 +1052,7 @@ module snax_shell #(
     assign dma_addr_map = '{
       idx : 1,
       base: localmem_addr_base_i,
-      mask: ({AddrWidth{1'b1}} << LocalMemAddrWidth) // TODO, change me later with local mem address width
+      mask: ({AddrWidth{1'b1}} << 12) // TODO, change me later with local mem address width. Also make sure to test the DMA out.
     };
 
     //---------------------------------------
@@ -1228,6 +1228,8 @@ module snax_shell #(
       .LocalMemSize       ( LocalMemSize                ),
       .NumBanks           ( LocalMemBanks               ), // Need to maximize banks depending on WideDataWidth
       .SimInit            ( "random"                    ),
+      .ReadMem            ( 1'b1                        ),
+      .ReadMemFile        ( "./mem/data/data_mem.txt"   ),
       .addr_t             ( mem_addr_t                  ),
       .data_t             ( mem_data_t                  ),
       .strb_t             ( mem_strb_t                  ),
