@@ -100,15 +100,37 @@ module snax_hwpe_ctrl #(
 
   // wen = 1'b1 whenever we read. wen = 1'b0 whenever we write
   // decode this based on the instruction given
-  assign wen = (req_i.data_op == SNAX_RD_ACC) ? 1'b1 : 1'b0;
+  // assign wen = (req_i.data_op == SNAX_RD_ACC) ? 1'b1 : 1'b0; // This was for original HWPE controller
+  // This below considers the CSRs
+  assign wen = (req_i.data_op == SNAX_RD_ACC ||
+                req_i.data_op == CSRRS       || req_i.data_op == CSRRSI ||
+                req_i.data_op == CSRRC       || req_i.data_op == CSRRCI    ) ? 1'b1 : 1'b0;
+
+  // Adding switcher to handle both instruction extension and CSR
+  logic [31:0] address_in;
+
+  always_comb begin
+    if( req_i.data_op == CSRRW || req_i.data_op == CSRRWI ||
+        req_i.data_op == CSRRS || req_i.data_op == CSRRSI ||
+        req_i.data_op == CSRRC || req_i.data_op == CSRRCI ) begin
+
+      //Offset due to start of address CSR and << 2 due to "byte" addressable of registers
+      address_in = (req_i.data_arga[31:0] - 32'h3c0) << 2; 
+
+    end else begin
+      address_in = req_i.data_arga[31:0];
+    end
+
+  end
 
   // Byte enable always only when we need to write
   assign be  = (transaction_valid & !wen) ? 4'hF : 4'h0;
-
+ 
   // Pack
   assign fifo_sn_hwpe_in.id   = req_i.id;
   assign fifo_sn_hwpe_in.req  = transaction_valid;
-  assign fifo_sn_hwpe_in.add  = req_i.data_arga[31:0];
+  // assign fifo_sn_hwpe_in.add  = req_i.data_arga[31:0];
+  assign fifo_sn_hwpe_in.add  = address_in;
   assign fifo_sn_hwpe_in.wen  = wen;
   assign fifo_sn_hwpe_in.be   = be;
   assign fifo_sn_hwpe_in.data = req_i.data_argb[31:0];
