@@ -21,6 +21,28 @@ addi x1, x0, 1
 csrrw x0, 980, x1 # offset = 960, addr = 20 for REG_NB_ITER = 1
 addi x1, x0, 9  
 csrrw x0, 981, x1 # offset = 960, addr = 21 for REG_LEN_ITER = 9 + 1 (the + 1 is always there)
+nop
+nop
+nop
+nop
+nop
+nop
+csrrs x1, 976, x0
+csrrs x1, 977, x0
+csrrs x1, 978, x0
+csrrs x1, 979, x0
+csrrs x1, 980, x0
+csrrs x1, 981, x0
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
 csrrw x0, 960, x0 # offset = 960, addr = 0 for MANDATORY TRIGGER
 addi x4, x0, 0
 addi x5, x0, 2

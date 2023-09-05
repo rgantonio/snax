@@ -67,7 +67,7 @@ module snax_mac # (
   // Translates the snax valid-ready signals
   // Into HWPE signals
   //------------------------------
-  snax_hwpe_ctrl #(
+  snax_hwpe_unbuff_ctrl #(
     .DataWidth    ( DataWidth          ), // Default data width
     .acc_req_t    ( acc_req_t          ), // Memory request payload type, usually write enable, write data, etc.
     .acc_rsp_t    ( acc_rsp_t          )  // Memory response payload type, usually read data
