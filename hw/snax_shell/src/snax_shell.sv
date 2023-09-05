@@ -493,8 +493,6 @@ module snax_shell #(
       .dma_events_o       ( axi_dma_events_o          )
     );
 
-    
-
   end else begin : gen_no_dma
 
     //-------------------------------
@@ -510,6 +508,7 @@ module snax_shell #(
 
     assign dma_resp        =  '0;
     assign axi_dma_perf_o  =  '0;
+
   end
 
   //-------------------------------
@@ -1006,7 +1005,7 @@ module snax_shell #(
     mem_rsp_t [LocalMemBanks-1:0] local_mem_rsp;
 
     // Simple rewiring for SNAX signals
-    assign snax_req_o    = acc_snitch_demux;
+    assign snax_req_o    = acc_snitch_demux_q;
     assign snax_qvalid_o = snax_qvalid;
     assign snax_qready   = snax_qready_i;
 
